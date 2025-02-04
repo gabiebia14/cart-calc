@@ -5,11 +5,11 @@ export const BottomNav = () => {
   const location = useLocation();
   
   const isActive = (path: string) => {
-    return location.pathname === path ? "text-purple-600" : "text-gray-500 hover:text-purple-600";
+    return location.pathname === path ? "text-[#9b87f5]" : "text-gray-400 hover:text-[#9b87f5]";
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-2 px-4">
+    <nav className="fixed bottom-0 left-0 right-0 bg-[#242937] border-t border-[#303644] py-2 px-4">
       <div className="max-w-md mx-auto flex justify-between items-center">
         <Link to="/" className={`flex flex-col items-center ${isActive('/')}`}>
           <Home size={24} />
