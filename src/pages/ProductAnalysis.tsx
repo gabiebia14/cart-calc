@@ -2,98 +2,179 @@ import { BottomNav } from "@/components/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { LineChart, Line, XAxis, YAxis } from 'recharts';
 
 const ProductAnalysis = () => {
+  // Mock data - replace with real data later
+  const priceHistory = [
+    { date: '2024-01', price: 5.99 },
+    { date: '2024-02', price: 6.49 },
+    { date: '2024-03', price: 5.79 },
+    { date: '2024-04', price: 6.29 },
+  ];
+
+  const purchaseHistory = [
+    { date: '2024-04-01', price: 6.29, market: 'Mercado A', quantity: 2 },
+    { date: '2024-03-15', price: 5.79, market: 'Mercado B', quantity: 1 },
+    { date: '2024-02-28', price: 6.49, market: 'Mercado C', quantity: 3 },
+  ];
+
   return (
     <div className="min-h-screen bg-background font-inter">
-      <div className="max-w-md mx-auto p-4">
+      <div className="max-w-7xl mx-auto p-4">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Produtos
+              Análise de Produtos
             </h1>
             <p className="text-sm text-muted-foreground">
-              Análise seus gastos por produto
+              Acompanhe os preços e histórico de compras
             </p>
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="relative mb-6">
-          <Input 
-            placeholder="Buscar produtos..."
-            className="w-full pl-10"
-          />
-          <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Select>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o mês" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="04-2024">Abril 2024</SelectItem>
+              <SelectItem value="03-2024">Março 2024</SelectItem>
+              <SelectItem value="02-2024">Fevereiro 2024</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o mercado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mercado-a">Mercado A</SelectItem>
+              <SelectItem value="mercado-b">Mercado B</SelectItem>
+              <SelectItem value="mercado-c">Mercado C</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="relative col-span-2">
+            <Input 
+              placeholder="Buscar produtos..."
+              className="w-full pl-10"
+            />
+            <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+          </div>
         </div>
 
-        {/* Most Bought Products */}
+        {/* Product Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <Card className="shadow-sm">
+            <CardContent className="p-4">
+              <h3 className="font-semibold mb-2">Menor Preço</h3>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-green-600">R$ 5,79</p>
+                <p className="text-sm text-muted-foreground">15/03/2024 - Mercado B</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm">
+            <CardContent className="p-4">
+              <h3 className="font-semibold mb-2">Maior Preço</h3>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-red-600">R$ 6,49</p>
+                <p className="text-sm text-muted-foreground">28/02/2024 - Mercado C</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm">
+            <CardContent className="p-4">
+              <h3 className="font-semibold mb-2">Total Gasto</h3>
+              <div className="space-y-1">
+                <p className="text-2xl font-bold text-purple-600">R$ 32,45</p>
+                <p className="text-sm text-muted-foreground">6 unidades</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Price Variation Chart */}
         <Card className="mb-6 shadow-sm">
           <CardContent className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h2 className="font-semibold text-lg text-foreground">Produtos Mais Comprados</h2>
-                <p className="text-sm text-muted-foreground">Últimos 30 dias</p>
-              </div>
-            </div>
-            <div className="space-y-4">
-              {[
-                { name: "Leite", quantity: 12, totalSpent: 89.88 },
-                { name: "Pão", quantity: 8, totalSpent: 32.00 },
-                { name: "Café", quantity: 6, totalSpent: 120.00 },
-              ].map((product) => (
-                <div 
-                  key={product.name}
-                  className="flex items-center justify-between p-3 bg-secondary rounded-lg"
-                >
-                  <div>
-                    <p className="font-medium">{product.name}</p>
-                    <p className="text-sm text-muted-foreground">{product.quantity}x comprado</p>
-                  </div>
-                  <p className="text-primary font-medium">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.totalSpent)}
-                  </p>
-                </div>
-              ))}
+            <h3 className="font-semibold mb-4">Variação de Preço</h3>
+            <div className="h-64">
+              <ChartContainer config={{}}>
+                <LineChart data={priceHistory}>
+                  <XAxis dataKey="date" stroke="hsl(var(--primary))" />
+                  <YAxis stroke="hsl(var(--primary))" />
+                  <Line 
+                    type="monotone" 
+                    dataKey="price" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                  />
+                  <ChartTooltip />
+                </LineChart>
+              </ChartContainer>
             </div>
           </CardContent>
         </Card>
 
-        {/* Price History */}
-        <Card className="shadow-sm">
+        {/* Purchase History Table */}
+        <Card className="shadow-sm mb-6">
           <CardContent className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h2 className="font-semibold text-lg text-foreground">Histórico de Preços</h2>
-                <p className="text-sm text-muted-foreground">Variação de preços</p>
-              </div>
-            </div>
-            <div className="space-y-3">
-              {[
-                { name: "Arroz 5kg", oldPrice: 21.90, currentPrice: 19.90, difference: -9.13 },
-                { name: "Feijão 1kg", oldPrice: 6.90, currentPrice: 7.50, difference: 8.70 },
-              ].map((item) => (
-                <div 
-                  key={item.name}
-                  className="flex items-center justify-between p-3 bg-secondary rounded-lg"
-                >
-                  <div>
-                    <p className="font-medium">{item.name}</p>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.oldPrice)}
-                      </span>
-                      <span className="text-foreground">
-                        → {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.currentPrice)}
-                      </span>
-                    </div>
-                  </div>
-                  <p className={`font-medium ${item.difference < 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {item.difference > 0 ? '+' : ''}{item.difference.toFixed(2)}%
-                  </p>
-                </div>
-              ))}
+            <h3 className="font-semibold mb-4">Histórico de Compras</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Mercado</TableHead>
+                  <TableHead>Quantidade</TableHead>
+                  <TableHead>Preço</TableHead>
+                  <TableHead>Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {purchaseHistory.map((purchase, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{purchase.date}</TableCell>
+                    <TableCell>{purchase.market}</TableCell>
+                    <TableCell>{purchase.quantity}</TableCell>
+                    <TableCell>
+                      {new Intl.NumberFormat('pt-BR', { 
+                        style: 'currency', 
+                        currency: 'BRL' 
+                      }).format(purchase.price)}
+                    </TableCell>
+                    <TableCell>
+                      {new Intl.NumberFormat('pt-BR', { 
+                        style: 'currency', 
+                        currency: 'BRL' 
+                      }).format(purchase.price * purchase.quantity)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Product Category */}
+        <Card className="shadow-sm mb-20">
+          <CardContent className="p-4">
+            <h3 className="font-semibold mb-2">Categoria do Produto</h3>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-sm">
+                Alimentos
+              </span>
+              <span className="px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-sm">
+                Básicos
+              </span>
             </div>
           </CardContent>
         </Card>
