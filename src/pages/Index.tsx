@@ -5,7 +5,10 @@ import { TotalExpenses } from "@/components/TotalExpenses";
 import { BottomNav } from "@/components/BottomNav";
 import { Expense } from "@/types/expense";
 import { toast } from "sonner";
-import { Bell } from "lucide-react";
+import { Bell, TrendingUp, ShoppingBag, ArrowUpRight } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 
 const Index = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -19,6 +22,21 @@ const Index = () => {
     setExpenses(expenses.filter((expense) => expense.id !== id));
     toast.success("Item removido com sucesso!");
   };
+
+  // Dados de exemplo para os gráficos
+  const marketData = [
+    { name: 'Carrefour', value: 1200 },
+    { name: 'Extra', value: 800 },
+    { name: 'Assaí', value: 600 },
+    { name: 'Dia', value: 400 },
+  ];
+
+  const productData = [
+    { name: 'Arroz', value: 250 },
+    { name: 'Feijão', value: 200 },
+    { name: 'Leite', value: 180 },
+    { name: 'Café', value: 150 },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white pb-20 font-inter">
@@ -45,16 +63,68 @@ const Index = () => {
           <TotalExpenses expenses={expenses} />
         </div>
 
+        {/* Análise de Mercados */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="font-semibold text-lg">Mercados Mais Frequentados</h2>
+                <p className="text-sm text-gray-500">Últimos 30 dias</p>
+              </div>
+              <TrendingUp className="text-purple-500" size={20} />
+            </div>
+            <div className="h-64">
+              <ChartContainer config={{}}>
+                <BarChart data={marketData}>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  <ChartTooltip />
+                </BarChart>
+              </ChartContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Produtos Mais Comprados */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="font-semibold text-lg">Produtos Mais Comprados</h2>
+                <p className="text-sm text-gray-500">Este mês</p>
+              </div>
+              <ShoppingBag className="text-purple-500" size={20} />
+            </div>
+            <div className="h-64">
+              <ChartContainer config={{}}>
+                <BarChart data={productData}>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  <ChartTooltip />
+                </BarChart>
+              </ChartContainer>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-4 mb-6">
-          <button className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-purple-200 transition-colors">
-            <span className="block text-sm font-medium text-gray-800">Adicionar Gasto</span>
+          <Card className="p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-800">Adicionar Gasto</span>
+              <ArrowUpRight className="text-purple-500" size={16} />
+            </div>
             <span className="text-xs text-gray-500">Registre suas despesas</span>
-          </button>
-          <button className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-purple-200 transition-colors">
-            <span className="block text-sm font-medium text-gray-800">Ver Relatório</span>
+          </Card>
+          <Card className="p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-800">Ver Relatório</span>
+              <ArrowUpRight className="text-purple-500" size={16} />
+            </div>
             <span className="text-xs text-gray-500">Análise detalhada</span>
-          </button>
+          </Card>
         </div>
 
         <AddExpenseForm onAdd={handleAddExpense} />
