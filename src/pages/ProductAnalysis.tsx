@@ -5,25 +5,38 @@ import { Input } from "@/components/ui/input";
 
 const ProductAnalysis = () => {
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20">
-      {/* Header */}
-      <div className="bg-primary p-4">
-        <h1 className="text-xl font-semibold mb-4 text-primary-foreground">Produtos</h1>
-        <div className="relative">
+    <div className="min-h-screen bg-background font-inter">
+      <div className="max-w-md mx-auto p-4">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              Produtos
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Análise seus gastos por produto
+            </p>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative mb-6">
           <Input 
             placeholder="Buscar produtos..."
-            className="w-full pl-10 bg-white/10 border-none text-primary-foreground placeholder:text-primary-foreground/60"
+            className="w-full pl-10"
           />
-          <Search className="absolute left-3 top-2.5 h-5 w-5 text-primary-foreground/60" />
+          <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="p-4 space-y-4">
         {/* Most Bought Products */}
-        <Card className="shadow-sm">
+        <Card className="mb-6 shadow-sm">
           <CardContent className="p-4">
-            <h2 className="text-lg font-medium mb-4">Produtos Mais Comprados</h2>
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="font-semibold text-lg text-foreground">Produtos Mais Comprados</h2>
+                <p className="text-sm text-muted-foreground">Últimos 30 dias</p>
+              </div>
+            </div>
             <div className="space-y-4">
               {[
                 { name: "Leite", quantity: 12, totalSpent: 89.88 },
@@ -39,7 +52,7 @@ const ProductAnalysis = () => {
                     <p className="text-sm text-muted-foreground">{product.quantity}x comprado</p>
                   </div>
                   <p className="text-primary font-medium">
-                    R$ {product.totalSpent.toFixed(2)}
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.totalSpent)}
                   </p>
                 </div>
               ))}
@@ -50,7 +63,12 @@ const ProductAnalysis = () => {
         {/* Price History */}
         <Card className="shadow-sm">
           <CardContent className="p-4">
-            <h2 className="text-lg font-medium mb-4">Histórico de Preços</h2>
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="font-semibold text-lg text-foreground">Histórico de Preços</h2>
+                <p className="text-sm text-muted-foreground">Variação de preços</p>
+              </div>
+            </div>
             <div className="space-y-3">
               {[
                 { name: "Arroz 5kg", oldPrice: 21.90, currentPrice: 19.90, difference: -9.13 },
@@ -64,10 +82,10 @@ const ProductAnalysis = () => {
                     <p className="font-medium">{item.name}</p>
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-muted-foreground">
-                        R$ {item.oldPrice.toFixed(2)}
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.oldPrice)}
                       </span>
                       <span className="text-foreground">
-                        → R$ {item.currentPrice.toFixed(2)}
+                        → {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.currentPrice)}
                       </span>
                     </div>
                   </div>
