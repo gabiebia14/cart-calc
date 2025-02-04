@@ -1,17 +1,86 @@
 import { BottomNav } from "@/components/BottomNav";
+import { Card, CardContent } from "@/components/ui/card";
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 const ProductAnalysis = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white pb-20">
-      <div className="max-w-md mx-auto p-4">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Análise de Produtos</h1>
-        <div className="space-y-6">
-          {/* Placeholder para os componentes futuros */}
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <p className="text-gray-500">Análise de produtos em desenvolvimento...</p>
-          </div>
+    <div className="min-h-screen bg-[#1A1F2C] text-white pb-20">
+      {/* Header */}
+      <div className="bg-[#9b87f5] p-4">
+        <h1 className="text-xl font-semibold mb-4">Produtos</h1>
+        <div className="relative">
+          <Input 
+            placeholder="Buscar produtos..."
+            className="w-full pl-10 bg-white/10 border-none text-white placeholder:text-white/60"
+          />
+          <Search className="absolute left-3 top-2.5 h-5 w-5 text-white/60" />
         </div>
       </div>
+
+      {/* Content */}
+      <div className="p-4 space-y-4">
+        {/* Most Bought Products */}
+        <Card className="bg-[#242937] border-[#303644]">
+          <CardContent className="p-4">
+            <h2 className="text-lg font-medium mb-4">Produtos Mais Comprados</h2>
+            <div className="space-y-4">
+              {[
+                { name: "Leite", quantity: 12, totalSpent: 89.88 },
+                { name: "Pão", quantity: 8, totalSpent: 32.00 },
+                { name: "Café", quantity: 6, totalSpent: 120.00 },
+              ].map((product) => (
+                <div 
+                  key={product.name}
+                  className="flex items-center justify-between p-3 bg-[#1A1F2C] rounded-lg"
+                >
+                  <div>
+                    <p className="font-medium">{product.name}</p>
+                    <p className="text-sm text-gray-400">{product.quantity}x comprado</p>
+                  </div>
+                  <p className="text-[#9b87f5] font-medium">
+                    R$ {product.totalSpent.toFixed(2)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Price History */}
+        <Card className="bg-[#242937] border-[#303644]">
+          <CardContent className="p-4">
+            <h2 className="text-lg font-medium mb-4">Histórico de Preços</h2>
+            <div className="space-y-3">
+              {[
+                { name: "Arroz 5kg", oldPrice: 21.90, currentPrice: 19.90, difference: -9.13 },
+                { name: "Feijão 1kg", oldPrice: 6.90, currentPrice: 7.50, difference: 8.70 },
+              ].map((item) => (
+                <div 
+                  key={item.name}
+                  className="flex items-center justify-between p-3 bg-[#1A1F2C] rounded-lg"
+                >
+                  <div>
+                    <p className="font-medium">{item.name}</p>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-gray-400">
+                        R$ {item.oldPrice.toFixed(2)}
+                      </span>
+                      <span className="text-white">
+                        → R$ {item.currentPrice.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className={`font-medium ${item.difference < 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {item.difference > 0 ? '+' : ''}{item.difference.toFixed(2)}%
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <BottomNav />
     </div>
   );
