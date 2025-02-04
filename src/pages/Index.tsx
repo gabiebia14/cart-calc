@@ -10,7 +10,6 @@ import { BarChart, Bar, XAxis, YAxis } from 'recharts';
 const Index = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
 
-  // Dados de exemplo para o gráfico
   const productData = [
     { name: 'Arroz', value: 250 },
     { name: 'Feijão', value: 200 },
@@ -18,7 +17,6 @@ const Index = () => {
     { name: 'Café', value: 150 },
   ];
 
-  // Dados do mercado mais frequentado
   const topMarket = {
     name: 'Carrefour',
     totalSpent: 1200,
@@ -27,57 +25,57 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#1A1F2C] pb-20 font-inter">
+    <div className="min-h-screen bg-background font-inter">
       <div className="max-w-md mx-auto p-4">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className="text-2xl font-bold text-foreground">
               Olá!
             </h1>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-muted-foreground">
               Controle seus gastos de forma simples
             </p>
           </div>
           <button className="p-2 relative">
-            <Bell className="text-gray-400" size={24} />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-[#9b87f5] rounded-full"></span>
+            <Bell className="text-muted-foreground" size={24} />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
           </button>
         </div>
 
         {/* Card Total */}
-        <div className="bg-gradient-to-r from-[#9b87f5] to-[#7E69AB] rounded-2xl p-6 mb-6 text-white shadow-lg">
+        <div className="bg-gradient-to-r from-primary to-accent rounded-2xl p-6 mb-6 text-white shadow-lg">
           <p className="text-sm opacity-90 mb-2">Total de Gastos</p>
           <TotalExpenses expenses={expenses} />
         </div>
 
         {/* Mercado Mais Frequentado */}
-        <Card className="mb-6 bg-[#242937] border-[#303644]">
+        <Card className="mb-6 shadow-sm">
           <CardContent className="p-4">
             <div className="flex justify-between items-center mb-4">
               <div>
-                <h2 className="font-semibold text-lg text-white">Mercado Mais Frequentado</h2>
-                <p className="text-sm text-gray-400">Últimos 30 dias</p>
+                <h2 className="font-semibold text-lg text-foreground">Mercado Mais Frequentado</h2>
+                <p className="text-sm text-muted-foreground">Últimos 30 dias</p>
               </div>
-              <Building2 className="text-[#9b87f5]" size={20} />
+              <Building2 className="text-primary" size={20} />
             </div>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-[#9b87f5]">{topMarket.name}</span>
-                <span className="text-sm bg-[#303644] text-[#9b87f5] px-3 py-1 rounded-full">
+                <span className="text-2xl font-bold text-primary">{topMarket.name}</span>
+                <span className="text-sm bg-secondary text-primary px-3 py-1 rounded-full">
                   {topMarket.visits} visitas
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-400">Total Gasto</p>
-                  <p className="text-lg font-semibold text-white">
+                  <p className="text-sm text-muted-foreground">Total Gasto</p>
+                  <p className="text-lg font-semibold text-foreground">
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(topMarket.totalSpent)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Ticket Médio</p>
-                  <p className="text-lg font-semibold text-white">
+                  <p className="text-sm text-muted-foreground">Ticket Médio</p>
+                  <p className="text-lg font-semibold text-foreground">
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(topMarket.avgTicket)}
                   </p>
                 </div>
@@ -87,21 +85,21 @@ const Index = () => {
         </Card>
 
         {/* Produtos Mais Comprados */}
-        <Card className="mb-6 bg-[#242937] border-[#303644]">
+        <Card className="mb-6 shadow-sm">
           <CardContent className="p-4">
             <div className="flex justify-between items-center mb-4">
               <div>
-                <h2 className="font-semibold text-lg text-white">Produtos Mais Comprados</h2>
-                <p className="text-sm text-gray-400">Este mês</p>
+                <h2 className="font-semibold text-lg text-foreground">Produtos Mais Comprados</h2>
+                <p className="text-sm text-muted-foreground">Este mês</p>
               </div>
-              <ShoppingBag className="text-[#9b87f5]" size={20} />
+              <ShoppingBag className="text-primary" size={20} />
             </div>
             <div className="h-64">
               <ChartContainer config={{}}>
                 <BarChart data={productData}>
-                  <XAxis dataKey="name" stroke="#9b87f5" />
-                  <YAxis stroke="#9b87f5" />
-                  <Bar dataKey="value" fill="#9b87f5" radius={[4, 4, 0, 0]} />
+                  <XAxis dataKey="name" stroke="hsl(var(--primary))" />
+                  <YAxis stroke="hsl(var(--primary))" />
+                  <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                   <ChartTooltip />
                 </BarChart>
               </ChartContainer>
