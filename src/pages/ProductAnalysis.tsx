@@ -37,31 +37,9 @@ const ProductAnalysis = () => {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Select>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o mês" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="04-2024">Abril 2024</SelectItem>
-              <SelectItem value="03-2024">Março 2024</SelectItem>
-              <SelectItem value="02-2024">Fevereiro 2024</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o mercado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="mercado-a">Mercado A</SelectItem>
-              <SelectItem value="mercado-b">Mercado B</SelectItem>
-              <SelectItem value="mercado-c">Mercado C</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div className="relative col-span-2">
+        {/* Filter */}
+        <div className="mb-6">
+          <div className="relative">
             <Input 
               placeholder="Buscar produtos..."
               className="w-full pl-10"
