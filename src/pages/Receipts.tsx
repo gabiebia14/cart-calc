@@ -52,21 +52,22 @@ const Receipts = () => {
 
   const handleUpload = async (file: File) => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Você precisa estar logado para enviar recibos');
+        return;
+      }
+
       // Upload image to Supabase Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `receipts/${fileName}`;
+      const filePath = `${fileName}`;
 
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('receipts')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
-
-      // Get public URL for the uploaded image
-      const { data: { publicUrl } } = supabase.storage
-        .from('receipts')
-        .getPublicUrl(filePath);
 
       // Create receipt record in the database
       const newReceipt: Partial<Receipt> = {
@@ -84,8 +85,10 @@ const Receipts = () => {
 
       if (dbError) throw dbError;
 
-      setReceipts([receipt, ...receipts]);
-      toast.success('Recibo enviado com sucesso!');
+      if (receipt) {
+        setReceipts([receipt, ...receipts]);
+        toast.success('Recibo enviado com sucesso!');
+      }
     } catch (error) {
       console.error('Error uploading receipt:', error);
       toast.error('Erro ao enviar recibo');
