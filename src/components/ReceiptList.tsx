@@ -17,15 +17,10 @@ export const ReceiptList = ({ receipts, onDelete }: ReceiptListProps) => {
           className="bg-white rounded-xl shadow-sm p-4 flex justify-between items-center border border-gray-100"
         >
           <div className="flex items-center gap-4">
-            <img 
-              src={receipt.imageUrl} 
-              alt={`Recibo ${receipt.storeName}`}
-              className="w-12 h-12 object-cover rounded-lg"
-            />
             <div>
-              <h3 className="font-medium text-gray-800">{receipt.storeName}</h3>
+              <h3 className="font-medium text-gray-800">{receipt.mercado}</h3>
               <p className="text-sm text-gray-500">
-                {format(receipt.date, "dd 'de' MMMM", { locale: ptBR })} • {receipt.itemCount} itens
+                {format(new Date(receipt.data_compra), "dd 'de' MMMM", { locale: ptBR })} • {receipt.items?.length || 0} itens
               </p>
             </div>
           </div>

@@ -24,10 +24,7 @@ const Receipts = () => {
 
       if (error) throw error;
 
-      setReceipts(data.map(receipt => ({
-        ...receipt,
-        date: new Date(receipt.date),
-      })));
+      setReceipts(data);
     } catch (error) {
       console.error('Error fetching receipts:', error);
       toast.error('Erro ao carregar recibos');
@@ -72,12 +69,11 @@ const Receipts = () => {
         .getPublicUrl(filePath);
 
       // Create receipt record in the database
-      const newReceipt = {
-        date: new Date(),
-        storeName: 'Novo Mercado',
+      const newReceipt: Partial<Receipt> = {
+        data_compra: new Date().toISOString(),
+        mercado: 'Novo Mercado',
         total: 0,
-        itemCount: 0,
-        imageUrl: publicUrl
+        items: []
       };
 
       const { error: dbError, data: receipt } = await supabase
@@ -88,7 +84,7 @@ const Receipts = () => {
 
       if (dbError) throw dbError;
 
-      setReceipts([{ ...receipt, date: new Date(receipt.date) }, ...receipts]);
+      setReceipts([receipt, ...receipts]);
       toast.success('Recibo enviado com sucesso!');
     } catch (error) {
       console.error('Error uploading receipt:', error);

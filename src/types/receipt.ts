@@ -1,8 +1,9 @@
 export interface Receipt {
   id: string;
-  date: Date;
-  storeName: string;
+  data_compra: string;
+  mercado: string;
+  items: any;
   total: number;
-  itemCount: number;
-  imageUrl: string;
+  created_at?: string;
+  user_id?: string;
 }
