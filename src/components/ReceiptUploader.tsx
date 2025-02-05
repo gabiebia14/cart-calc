@@ -3,17 +3,60 @@ import { Upload } from "lucide-react";
 import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ReceiptUploaderProps {
   onUpload: (file: File) => void;
 }
 
 export const ReceiptUploader = ({ onUpload }: ReceiptUploaderProps) => {
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const analyzeReceipt = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        'https://dybsrdtalpnckgyufrjo.supabase.co/functions/v1/analyze-receipt',
+        {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to analyze receipt');
+      }
+
+      const data = await response.json();
+      console.log('AI Analysis Result:', data.result);
+      
+      // Parse the JSON string from the AI response
+      try {
+        const items = JSON.parse(data.result.replace(/```json\n|\n```/g, ''));
+        console.log('Parsed items:', items);
+        toast.success(`Análise concluída! Encontrados ${items.length} itens.`);
+      } catch (e) {
+        console.error('Failed to parse AI response:', e);
+        toast.error('Erro ao processar a resposta da IA');
+      }
+
+    } catch (error) {
+      console.error('Error analyzing receipt:', error);
+      toast.error('Erro ao analisar o recibo');
+    }
+  };
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
       if (file.type.startsWith('image/')) {
         onUpload(file);
+        await analyzeReceipt(file);
         toast.success('Recibo enviado com sucesso!');
       } else {
         toast.error('Por favor, envie apenas imagens.');
