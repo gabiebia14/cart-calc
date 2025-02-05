@@ -4,7 +4,7 @@ import { ReceiptList } from "@/components/ReceiptList";
 import { ReceiptUploader } from "@/components/ReceiptUploader";
 import { useState, useEffect } from "react";
 import { Receipt } from "@/types/receipt";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const Receipts = () => {
