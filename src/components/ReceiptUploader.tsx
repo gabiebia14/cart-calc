@@ -17,6 +17,7 @@ export const ReceiptUploader = ({ onUpload }: ReceiptUploaderProps) => {
 
       const { data: { session } } = await supabase.auth.getSession();
       
+      console.log('Sending receipt for analysis...');
       const response = await fetch(
         'https://dybsrdtalpnckgyufrjo.supabase.co/functions/v1/analyze-receipt',
         {
@@ -35,19 +36,25 @@ export const ReceiptUploader = ({ onUpload }: ReceiptUploaderProps) => {
       const data = await response.json();
       console.log('AI Analysis Result:', data.result);
       
-      // Parse the JSON string from the AI response
       try {
         const items = JSON.parse(data.result.replace(/```json\n|\n```/g, ''));
         console.log('Parsed items:', items);
-        toast.success(`Análise concluída! Encontrados ${items.length} itens.`);
+        
+        // Calculate valid items count
+        const validItems = items.filter((item: any) => item.validFormat);
+        toast.success(`Análise concluída! Encontrados ${validItems.length} itens válidos.`);
+        
+        return items;
       } catch (e) {
         console.error('Failed to parse AI response:', e);
         toast.error('Erro ao processar a resposta da IA');
+        return null;
       }
 
     } catch (error) {
       console.error('Error analyzing receipt:', error);
       toast.error('Erro ao analisar o recibo');
+      return null;
     }
   };
 
@@ -56,8 +63,10 @@ export const ReceiptUploader = ({ onUpload }: ReceiptUploaderProps) => {
       const file = acceptedFiles[0];
       if (file.type.startsWith('image/')) {
         onUpload(file);
-        await analyzeReceipt(file);
-        toast.success('Recibo enviado com sucesso!');
+        const items = await analyzeReceipt(file);
+        if (items) {
+          toast.success('Recibo processado com sucesso!');
+        }
       } else {
         toast.error('Por favor, envie apenas imagens.');
       }

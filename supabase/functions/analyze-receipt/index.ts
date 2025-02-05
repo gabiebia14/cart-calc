@@ -23,15 +23,24 @@ serve(async (req) => {
     const model = genAI.getGenerativeModel({ 
       model: "gemini-pro-vision",
       generationConfig: {
-        temperature: 1,
-        topP: 0.95,
+        temperature: 0.4,
+        topP: 0.8,
         topK: 40,
         maxOutputTokens: 8192,
       }
     })
 
     const prompt = {
-      text: "Você é um agente extrator de dados de recibos de supermercado. Analise esta imagem de recibo e retorne um array JSON com os itens encontrados. Para cada item inclua: productName (string), quantity (number), unitPrice (number), total (number), e validFormat (boolean). Use ponto como separador decimal."
+      text: `Você é um agente extrator de dados de recibos de supermercado. Analise esta imagem de recibo e retorne um array JSON com os itens encontrados. Para cada item inclua:
+      - productName (string): nome do produto
+      - quantity (number): quantidade comprada
+      - unitPrice (number): preço unitário
+      - total (number): preço total
+      - validFormat (boolean): indica se a linha foi processada corretamente
+      
+      Use ponto como separador decimal. Se houver erro nos cálculos (ex: quantity * unitPrice ≠ total), marque validFormat como false.
+      
+      Retorne apenas o JSON, sem explicações adicionais.`
     }
 
     // Convert file to base64
@@ -46,9 +55,11 @@ serve(async (req) => {
       }
     }
 
+    console.log('Analyzing receipt image...')
     const result = await model.generateContent([prompt, imageParts])
     const response = await result.response
     const text = response.text()
+    console.log('Analysis complete:', text)
 
     return new Response(
       JSON.stringify({ result: text }),
@@ -61,6 +72,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
+    console.error('Error analyzing receipt:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
