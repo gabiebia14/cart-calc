@@ -24,7 +24,7 @@ const Receipts = () => {
 
       if (error) throw error;
 
-      setReceipts(data);
+      setReceipts(data || []);
     } catch (error) {
       console.error('Error fetching receipts:', error);
       toast.error('Erro ao carregar recibos');
@@ -70,11 +70,12 @@ const Receipts = () => {
       if (uploadError) throw uploadError;
 
       // Create receipt record in the database
-      const newReceipt: Partial<Receipt> = {
+      const newReceipt = {
         data_compra: new Date().toISOString(),
         mercado: 'Novo Mercado',
         total: 0,
-        items: []
+        items: [],
+        user_id: session.user.id
       };
 
       const { error: dbError, data: receipt } = await supabase
