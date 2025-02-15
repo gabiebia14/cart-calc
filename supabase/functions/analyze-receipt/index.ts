@@ -7,10 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Função para dormir por um tempo específico
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Função para tentar a análise com retentativas
 async function analyzeWithRetry(model: any, prompt: any, imageParts: any, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -24,8 +22,7 @@ async function analyzeWithRetry(model: any, prompt: any, imageParts: any, maxRet
         throw error;
       }
       
-      // Se o erro for de sobrecarga, espera um pouco mais a cada tentativa
-      const waitTime = attempt * 2000; // 2s, 4s, 6s
+      const waitTime = attempt * 2000;
       console.log(`Aguardando ${waitTime}ms antes da próxima tentativa...`);
       await sleep(waitTime);
     }
@@ -42,31 +39,44 @@ serve(async (req) => {
     const file = formData.get('file')
 
     if (!file) {
-      throw new Error('No file provided')
+      throw new Error('Nenhum arquivo fornecido')
     }
 
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '')
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
       generationConfig: {
-        temperature: 0.4,
-        topP: 0.8,
-        topK: 40,
+        temperature: 0.1, // Reduzido para maior precisão
+        topP: 0.1,       // Reduzido para maior precisão
+        topK: 1,         // Reduzido para maior precisão
         maxOutputTokens: 8192,
       }
     })
 
     const prompt = {
-      text: `Você é um agente extrator de dados de recibos de supermercado. Analise esta imagem de recibo e retorne um array JSON com os itens encontrados. Para cada item inclua:
-      - productName (string): nome do produto
-      - quantity (number): quantidade comprada
-      - unitPrice (number): preço unitário
-      - total (number): preço total
-      - validFormat (boolean): indica se a linha foi processada corretamente
-      
-      Use ponto como separador decimal. Se houver erro nos cálculos (ex: quantity * unitPrice ≠ total), marque validFormat como false.
-      
-      Retorne apenas o JSON, sem explicações adicionais.`
+      text: `Analise esta imagem de recibo de supermercado e retorne um objeto JSON com:
+
+1. store_info:
+   - name: nome do estabelecimento exatamente como aparece no recibo
+   - date: data da compra no formato YYYY-MM-DD
+
+2. items: array de itens onde cada item deve conter:
+   - productName: nome do produto em maiúsculas exatamente como está no recibo
+   - quantity: número decimal usando ponto como separador
+   - unitPrice: preço unitário (se não estiver explícito, calcule dividindo o total pela quantidade)
+   - total: valor total do item exatamente como mostrado no recibo
+   - validFormat: true se todos os valores foram extraídos corretamente e quantity * unitPrice = total (com margem de erro de 0.01)
+
+3. total: valor total da compra exatamente como mostrado no recibo
+
+Regras importantes:
+- Preserve EXATAMENTE a grafia original dos produtos
+- Use ponto como separador decimal
+- Não arredonde valores, mantenha exatamente como está no recibo
+- Não inclua símbolos de moeda (R$) nos valores numéricos
+- Inclua todos os itens do recibo, mesmo que repetidos
+
+Retorne apenas o JSON, sem explicações adicionais.`
     }
 
     // Convert file to base64 more efficiently
@@ -85,20 +95,31 @@ serve(async (req) => {
       }
     }
 
-    console.log('Analisando imagem do recibo com retentativas...')
+    console.log('Analisando recibo...')
     const response = await analyzeWithRetry(model, prompt, imageParts);
     const text = response.text()
-    console.log('Análise completa:', text)
-
-    return new Response(
-      JSON.stringify({ result: text }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        }
+    
+    // Validação básica do JSON retornado
+    try {
+      const parsed = JSON.parse(text);
+      if (!parsed.store_info || !parsed.items || !Array.isArray(parsed.items)) {
+        throw new Error('Formato de resposta inválido');
       }
-    )
+      console.log('Análise completa:', JSON.stringify(parsed, null, 2))
+      
+      return new Response(
+        JSON.stringify({ result: text }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          }
+        }
+      )
+    } catch (parseError) {
+      console.error('Erro ao processar resposta:', parseError)
+      throw new Error('Erro ao processar dados do recibo')
+    }
 
   } catch (error) {
     console.error('Erro ao analisar recibo:', error)
