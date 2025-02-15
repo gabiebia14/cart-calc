@@ -7,10 +7,14 @@ import { useState, useEffect } from "react";
 import { Receipt } from "@/types/receipt";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const Receipts = () => {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchReceipts();
@@ -18,6 +22,7 @@ const Receipts = () => {
 
   const fetchReceipts = async () => {
     try {
+      setError(null);
       const { data, error } = await supabase
         .from('receipts')
         .select('*')
@@ -26,8 +31,9 @@ const Receipts = () => {
       if (error) throw error;
 
       setReceipts(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching receipts:', error);
+      setError('Não foi possível carregar os recibos. Tente novamente mais tarde.');
       toast.error('Erro ao carregar recibos');
     } finally {
       setIsLoading(false);
@@ -36,30 +42,71 @@ const Receipts = () => {
 
   const handleDelete = async (id: string) => {
     try {
+      setError(null);
+      // Primeiro remove o recibo do estado para feedback imediato
+      setReceipts(receipts.filter(receipt => receipt.id !== id));
+      
       const { error } = await supabase
         .from('receipts')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        // Se houver erro, reverte a remoção
+        await fetchReceipts();
+        throw error;
+      }
 
-      setReceipts(receipts.filter(receipt => receipt.id !== id));
       toast.success('Recibo excluído com sucesso');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting receipt:', error);
-      toast.error('Erro ao excluir recibo');
+      toast.error('Erro ao excluir recibo. Tente novamente.');
+      setError('Não foi possível excluir o recibo. Tente novamente.');
     }
+  };
+
+  const validateReceiptData = (items: any[]) => {
+    if (!Array.isArray(items)) {
+      throw new Error('Formato de dados inválido');
+    }
+
+    const validItems = items.filter(item => {
+      return (
+        item.productName &&
+        typeof item.quantity === 'number' &&
+        typeof item.unitPrice === 'number' &&
+        typeof item.total === 'number' &&
+        typeof item.validFormat === 'boolean'
+      );
+    });
+
+    if (validItems.length === 0) {
+      throw new Error('Nenhum item válido encontrado no recibo');
+    }
+
+    return validItems;
   };
 
   const handleUpload = async (file: File) => {
     try {
+      setError(null);
+      setIsProcessing(true);
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast.error('Você precisa estar logado para enviar recibos');
-        return;
+        throw new Error('Você precisa estar logado para enviar recibos');
       }
 
-      // Upload image to Supabase Storage
+      // Validação do arquivo
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Por favor, envie apenas arquivos de imagem');
+      }
+
+      if (file.size > 5 * 1024 * 1024) { // 5MB
+        throw new Error('O arquivo é muito grande. Tamanho máximo: 5MB');
+      }
+
+      // Upload da imagem
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `${fileName}`;
@@ -68,9 +115,12 @@ const Receipts = () => {
         .from('receipts')
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        throw new Error('Erro ao fazer upload da imagem. Tente novamente.');
+      }
 
-      // Analyze receipt with Edge Function
+      // Análise do recibo
+      toast.loading('Processando recibo...');
       const formData = new FormData();
       formData.append('file', file);
 
@@ -79,32 +129,36 @@ const Receipts = () => {
       });
 
       if (functionResponse.error) {
-        throw new Error(functionResponse.error.message);
+        throw new Error('Erro ao analisar o recibo: ' + functionResponse.error.message);
       }
 
+      // Processamento dos dados
       const receiptData = functionResponse.data.result;
       let parsedData;
       try {
-        parsedData = JSON.parse(receiptData);
+        parsedData = JSON.parse(receiptData.replace(/```json\n|\n```/g, ''));
       } catch (e) {
         console.error('Error parsing receipt data:', e);
         throw new Error('Erro ao processar dados do recibo');
       }
 
-      // Calculate total from items
-      const total = parsedData.reduce((acc: number, item: any) => {
+      // Validação dos dados
+      const validatedItems = validateReceiptData(parsedData);
+
+      // Cálculo do total
+      const total = validatedItems.reduce((acc: number, item: any) => {
         if (item.validFormat && item.total) {
           return acc + Number(item.total);
         }
         return acc;
       }, 0);
 
-      // Create receipt record in the database
+      // Criação do recibo
       const newReceipt = {
         data_compra: new Date().toISOString(),
-        mercado: 'Mercado Local', // Você pode customizar isso depois
+        mercado: 'Mercado Local',
         total: total,
-        items: parsedData,
+        items: validatedItems,
         user_id: session.user.id
       };
 
@@ -114,15 +168,23 @@ const Receipts = () => {
         .select()
         .single();
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        throw new Error('Erro ao salvar recibo no banco de dados');
+      }
 
       if (receipt) {
         setReceipts([receipt, ...receipts]);
-        toast.success('Recibo processado com sucesso!');
+        toast.success(`Recibo processado com sucesso! ${validatedItems.length} itens encontrados.`);
       }
     } catch (error: any) {
       console.error('Error uploading receipt:', error);
+      setError(error.message || 'Erro ao processar recibo');
       toast.error(error.message || 'Erro ao enviar recibo');
+      
+      // Tenta recuperar os recibos em caso de erro
+      await fetchReceipts();
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -141,8 +203,18 @@ const Receipts = () => {
           </div>
         </div>
 
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Upload Area */}
-        <ReceiptUploader onUpload={handleUpload} />
+        <ReceiptUploader onUpload={handleUpload} isProcessing={isProcessing} />
 
         {/* Receipt List */}
         <Card className="shadow-sm mt-6">

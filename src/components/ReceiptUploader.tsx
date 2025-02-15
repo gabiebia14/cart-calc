@@ -1,82 +1,19 @@
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Upload } from "lucide-react";
+import { Upload, Loader2 } from "lucide-react";
 import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ReceiptUploaderProps {
   onUpload: (file: File) => void;
+  isProcessing?: boolean;
 }
 
-export const ReceiptUploader = ({ onUpload }: ReceiptUploaderProps) => {
-  const analyzeReceipt = async (file: File) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
-        toast.error('Você precisa estar logado para analisar recibos');
-        return null;
-      }
-
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      console.log('Sending receipt for analysis...');
-      const response = await fetch(
-        'https://dybsrdtalpnckgyufrjo.supabase.co/functions/v1/analyze-receipt',
-        {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5YnNyZHRhbHBuY2tneXVmcmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY4MTU5NTMsImV4cCI6MjA1MjM5MTk1M30.2m7HNvNyiPRlmTxcvlItjOMFYOviw3OcfAZJ6ZhDqkc'
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to analyze receipt');
-      }
-
-      const data = await response.json();
-      console.log('AI Analysis Result:', data.result);
-      
-      try {
-        const items = JSON.parse(data.result.replace(/```json\n|\n```/g, ''));
-        console.log('Parsed items:', items);
-        
-        // Calculate valid items count
-        const validItems = items.filter((item: any) => item.validFormat);
-        toast.success(`Análise concluída! Encontrados ${validItems.length} itens válidos.`);
-        
-        return items;
-      } catch (e) {
-        console.error('Failed to parse AI response:', e);
-        toast.error('Erro ao processar a resposta da IA');
-        return null;
-      }
-
-    } catch (error) {
-      console.error('Error analyzing receipt:', error);
-      toast.error('Erro ao analisar o recibo');
-      return null;
-    }
-  };
-
+export const ReceiptUploader = ({ onUpload, isProcessing = false }: ReceiptUploaderProps) => {
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
-      if (file.type.startsWith('image/')) {
-        const items = await analyzeReceipt(file);
-        if (items) {
-          onUpload(file);
-          toast.success('Recibo processado com sucesso!');
-        }
-      } else {
-        toast.error('Por favor, envie apenas imagens.');
-      }
+      onUpload(file);
     }
   }, [onUpload]);
 
@@ -85,26 +22,36 @@ export const ReceiptUploader = ({ onUpload }: ReceiptUploaderProps) => {
     accept: {
       'image/*': ['.jpeg', '.jpg', '.png']
     },
-    maxFiles: 1
+    maxFiles: 1,
+    disabled: isProcessing,
   });
 
   return (
-    <Card className="shadow-sm">
+    <Card className={`shadow-sm ${isProcessing ? 'opacity-50' : ''}`}>
       <CardContent className="p-8">
-        <div {...getRootProps()} className="cursor-pointer">
+        <div {...getRootProps()} className={`cursor-pointer ${isProcessing ? 'pointer-events-none' : ''}`}>
           <input {...getInputProps()} />
           <div className="flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-4">
-              <Upload className="w-8 h-8 text-primary" />
+              {isProcessing ? (
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              ) : (
+                <Upload className="w-8 h-8 text-primary" />
+              )}
             </div>
             <h3 className="text-lg font-semibold mb-2">Upload de Recibos</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              {isDragActive
+              {isProcessing
+                ? "Processando..."
+                : isDragActive
                 ? "Solte o arquivo aqui..."
                 : "Arraste e solte seus recibos aqui ou clique para selecionar"}
             </p>
-            <button className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:opacity-90 transition-opacity">
-              Selecionar Arquivo
+            <button 
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+              disabled={isProcessing}
+            >
+              {isProcessing ? "Processando..." : "Selecionar Arquivo"}
             </button>
           </div>
         </div>
