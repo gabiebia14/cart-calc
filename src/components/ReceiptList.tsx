@@ -1,7 +1,10 @@
+
 import { Receipt } from "@/types/receipt";
 import { Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useState } from "react";
+import { EditReceiptModal } from "./EditReceiptModal";
 
 interface ReceiptListProps {
   receipts: Receipt[];
@@ -9,6 +12,13 @@ interface ReceiptListProps {
 }
 
 export const ReceiptList = ({ receipts, onDelete }: ReceiptListProps) => {
+  const [editingReceipt, setEditingReceipt] = useState<Receipt | null>(null);
+
+  const handleUpdate = (updatedReceipt: Receipt) => {
+    // O componente pai irá buscar os recibos novamente após a atualização
+    setEditingReceipt(null);
+  };
+
   return (
     <div className="space-y-3">
       {receipts.map((receipt) => (
@@ -30,7 +40,7 @@ export const ReceiptList = ({ receipts, onDelete }: ReceiptListProps) => {
             </span>
             <div className="flex gap-2">
               <button
-                onClick={() => {/* TODO: Implement edit */}}
+                onClick={() => setEditingReceipt(receipt)}
                 className="text-gray-400 hover:text-blue-500 transition-colors"
               >
                 <Edit size={20} />
@@ -45,6 +55,15 @@ export const ReceiptList = ({ receipts, onDelete }: ReceiptListProps) => {
           </div>
         </div>
       ))}
+
+      {editingReceipt && (
+        <EditReceiptModal
+          receipt={editingReceipt}
+          isOpen={!!editingReceipt}
+          onClose={() => setEditingReceipt(null)}
+          onUpdate={handleUpdate}
+        />
+      )}
     </div>
   );
 };
