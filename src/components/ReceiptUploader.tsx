@@ -25,13 +25,13 @@ export const ReceiptUploader = ({ onUpload }: ReceiptUploaderProps) => {
       
       console.log('Sending receipt for analysis...');
       const response = await fetch(
-        `${supabase.supabaseUrl}/functions/v1/analyze-receipt`,
+        'https://dybsrdtalpnckgyufrjo.supabase.co/functions/v1/analyze-receipt',
         {
           method: 'POST',
           body: formData,
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
-            'apikey': supabase.supabaseKey
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR5YnNyZHRhbHBuY2tneXVmcmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY4MTU5NTMsImV4cCI6MjA1MjM5MTk1M30.2m7HNvNyiPRlmTxcvlItjOMFYOviw3OcfAZJ6ZhDqkc'
           }
         }
       );
