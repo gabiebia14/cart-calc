@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { GoogleGenerativeAI } from "npm:@google/generative-ai"
 
@@ -43,10 +44,14 @@ serve(async (req) => {
       Retorne apenas o JSON, sem explicações adicionais.`
     }
 
-    // Convert file to base64
+    // Convert file to base64 more efficiently
     const buffer = await file.arrayBuffer()
     const bytes = new Uint8Array(buffer)
-    const base64 = btoa(String.fromCharCode(...bytes))
+    const chunks: string[] = []
+    for (let i = 0; i < bytes.length; i += 1024) {
+      chunks.push(String.fromCharCode(...bytes.slice(i, i + 1024)))
+    }
+    const base64 = btoa(chunks.join(''))
 
     const imageParts = {
       inlineData: {
