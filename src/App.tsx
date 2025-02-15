@@ -43,51 +43,53 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const App = () => (
-  <BrowserRouter>
+function App() {
+  return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Index />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/products"
-            element={
-              <ProtectedRoute>
-                <ProductAnalysis />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/receipts"
-            element={
-              <ProtectedRoute>
-                <Receipts />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/shopping-list"
-            element={
-              <ProtectedRoute>
-                <ShoppingList />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TooltipProvider>
+      <BrowserRouter>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/products"
+              element={
+                <ProtectedRoute>
+                  <ProductAnalysis />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/receipts"
+              element={
+                <ProtectedRoute>
+                  <Receipts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shopping-list"
+              element={
+                <ProtectedRoute>
+                  <ShoppingList />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
+      </BrowserRouter>
     </QueryClientProvider>
-  </BrowserRouter>
-);
+  );
+}
 
 export default App;
