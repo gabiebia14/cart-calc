@@ -1,3 +1,4 @@
+
 import { BottomNav } from "@/components/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
 import { ReceiptList } from "@/components/ReceiptList";
@@ -69,12 +70,41 @@ const Receipts = () => {
 
       if (uploadError) throw uploadError;
 
+      // Analyze receipt with Edge Function
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const functionResponse = await supabase.functions.invoke('analyze-receipt', {
+        body: formData,
+      });
+
+      if (functionResponse.error) {
+        throw new Error(functionResponse.error.message);
+      }
+
+      const receiptData = functionResponse.data.result;
+      let parsedData;
+      try {
+        parsedData = JSON.parse(receiptData);
+      } catch (e) {
+        console.error('Error parsing receipt data:', e);
+        throw new Error('Erro ao processar dados do recibo');
+      }
+
+      // Calculate total from items
+      const total = parsedData.reduce((acc: number, item: any) => {
+        if (item.validFormat && item.total) {
+          return acc + Number(item.total);
+        }
+        return acc;
+      }, 0);
+
       // Create receipt record in the database
       const newReceipt = {
         data_compra: new Date().toISOString(),
-        mercado: 'Novo Mercado',
-        total: 0,
-        items: [],
+        mercado: 'Mercado Local', // Você pode customizar isso depois
+        total: total,
+        items: parsedData,
         user_id: session.user.id
       };
 
@@ -88,11 +118,11 @@ const Receipts = () => {
 
       if (receipt) {
         setReceipts([receipt, ...receipts]);
-        toast.success('Recibo enviado com sucesso!');
+        toast.success('Recibo processado com sucesso!');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading receipt:', error);
-      toast.error('Erro ao enviar recibo');
+      toast.error(error.message || 'Erro ao enviar recibo');
     }
   };
 
