@@ -24,18 +24,34 @@ const Auth = () => {
           email,
           password,
         });
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes("user_already_exists")) {
+            toast.error("Este email já está cadastrado. Por favor, faça login.");
+            setIsSignUp(false);
+          } else {
+            toast.error(error.message);
+          }
+          return;
+        }
         toast.success("Cadastro realizado com sucesso! Verifique seu email.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes("Invalid login credentials")) {
+            toast.error("Email ou senha incorretos.");
+          } else {
+            toast.error(error.message);
+          }
+          return;
+        }
         navigate("/");
       }
     } catch (error: any) {
-      toast.error(error.message);
+      const errorMessage = error.message || "Ocorreu um erro. Tente novamente.";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
