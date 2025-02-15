@@ -14,7 +14,9 @@ async function analyzeWithRetry(model: any, prompt: any, imageParts: any, maxRet
     try {
       console.log(`Tentativa ${attempt} de ${maxRetries}`);
       const result = await model.generateContent([prompt, imageParts]);
-      return await result.response;
+      const response = await result.response;
+      console.log('Resposta do modelo:', response.text());
+      return response;
     } catch (error) {
       console.error(`Erro na tentativa ${attempt}:`, error);
       
@@ -46,9 +48,9 @@ serve(async (req) => {
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
       generationConfig: {
-        temperature: 0.1, // Reduzido para maior precisão
-        topP: 0.1,       // Reduzido para maior precisão
-        topK: 1,         // Reduzido para maior precisão
+        temperature: 0.1,
+        topP: 0.1,
+        topK: 1,
         maxOutputTokens: 8192,
       }
     })
@@ -95,20 +97,40 @@ Retorne apenas o JSON, sem explicações adicionais.`
       }
     }
 
-    console.log('Analisando recibo...')
+    console.log('Iniciando análise do recibo...')
     const response = await analyzeWithRetry(model, prompt, imageParts);
-    const text = response.text()
-    
-    // Validação básica do JSON retornado
+    const responseText = response.text();
+    console.log('Texto da resposta:', responseText);
+
+    let parsedData;
     try {
-      const parsed = JSON.parse(text);
-      if (!parsed.store_info || !parsed.items || !Array.isArray(parsed.items)) {
-        throw new Error('Formato de resposta inválido');
+      // Remove any potential markdown formatting
+      const cleanJson = responseText.replace(/```json\n?|\n?```/g, '').trim();
+      console.log('JSON limpo:', cleanJson);
+      
+      parsedData = JSON.parse(cleanJson);
+      
+      // Validação detalhada da estrutura
+      if (!parsedData.store_info?.name) {
+        throw new Error('store_info.name não encontrado');
       }
-      console.log('Análise completa:', JSON.stringify(parsed, null, 2))
+      if (!parsedData.store_info?.date) {
+        throw new Error('store_info.date não encontrado');
+      }
+      if (!Array.isArray(parsedData.items)) {
+        throw new Error('items não é um array');
+      }
+      if (parsedData.items.length === 0) {
+        throw new Error('nenhum item encontrado');
+      }
+      if (typeof parsedData.total !== 'number') {
+        throw new Error('total inválido');
+      }
+
+      console.log('Análise completa:', JSON.stringify(parsedData, null, 2));
       
       return new Response(
-        JSON.stringify({ result: text }),
+        JSON.stringify({ result: cleanJson }),
         { 
           headers: { 
             ...corsHeaders, 
@@ -117,12 +139,13 @@ Retorne apenas o JSON, sem explicações adicionais.`
         }
       )
     } catch (parseError) {
-      console.error('Erro ao processar resposta:', parseError)
-      throw new Error('Erro ao processar dados do recibo')
+      console.error('Erro ao processar JSON:', parseError);
+      console.error('Texto que causou erro:', responseText);
+      throw new Error(`Erro ao processar dados do recibo: ${parseError.message}`);
     }
 
   } catch (error) {
-    console.error('Erro ao analisar recibo:', error)
+    console.error('Erro ao analisar recibo:', error);
     
     let errorMessage = error.message;
     if (error.message.includes('503 Service Unavailable')) {
@@ -130,7 +153,10 @@ Retorne apenas o JSON, sem explicações adicionais.`
     }
     
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ 
+        error: errorMessage,
+        details: error.stack // Adiciona stack trace para debug
+      }),
       { 
         headers: { 
           ...corsHeaders, 
