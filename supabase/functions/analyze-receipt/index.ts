@@ -22,7 +22,7 @@ serve(async (req) => {
 
     const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '')
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-pro-vision",
+      model: "gemini-1.5-flash", // Atualizando para o novo modelo recomendado
       generationConfig: {
         temperature: 0.4,
         topP: 0.8,
