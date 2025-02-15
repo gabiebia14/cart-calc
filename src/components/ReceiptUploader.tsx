@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Upload } from "lucide-react";
 import { useCallback } from "react";
@@ -12,19 +13,25 @@ interface ReceiptUploaderProps {
 export const ReceiptUploader = ({ onUpload }: ReceiptUploaderProps) => {
   const analyzeReceipt = async (file: File) => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        toast.error('Você precisa estar logado para analisar recibos');
+        return null;
+      }
+
       const formData = new FormData();
       formData.append('file', file);
-
-      const { data: { session } } = await supabase.auth.getSession();
       
       console.log('Sending receipt for analysis...');
       const response = await fetch(
-        'https://dybsrdtalpnckgyufrjo.supabase.co/functions/v1/analyze-receipt',
+        `${supabase.supabaseUrl}/functions/v1/analyze-receipt`,
         {
           method: 'POST',
           body: formData,
           headers: {
-            'Authorization': `Bearer ${session?.access_token}`
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': supabase.supabaseKey
           }
         }
       );
@@ -62,9 +69,9 @@ export const ReceiptUploader = ({ onUpload }: ReceiptUploaderProps) => {
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
       if (file.type.startsWith('image/')) {
-        onUpload(file);
         const items = await analyzeReceipt(file);
         if (items) {
+          onUpload(file);
           toast.success('Recibo processado com sucesso!');
         }
       } else {
