@@ -21,36 +21,56 @@ export const validateReceiptData = (data: any) => {
     throw new Error('Formato de dados inválido');
   }
 
-  // Normalize numbers that might be strings
-  const validItems = data.items.filter(item => {
+  // Normalize numbers that might be strings and validate calculations
+  const validItems = data.items.map(item => {
     // Convert potential string numbers to actual numbers
-    if (item.quantity) item.quantity = Number(item.quantity);
-    if (item.unitPrice) item.unitPrice = Number(item.unitPrice);
-    if (item.total) item.total = Number(item.total);
+    const quantity = Number(item.quantity);
+    const unitPrice = Number(item.unitPrice);
+    const total = Number(item.total);
     
-    const isValid = (
+    // Check if all numbers are valid
+    const hasValidNumbers = (
       item.productName &&
-      !isNaN(item.quantity) &&
-      !isNaN(item.unitPrice) &&
-      !isNaN(item.total)
+      !isNaN(quantity) &&
+      !isNaN(unitPrice) &&
+      !isNaN(total) &&
+      quantity > 0 &&
+      unitPrice > 0
     );
+
+    // Calculate expected total
+    const expectedTotal = quantity * unitPrice;
     
-    // Set validFormat based on calculation check
-    item.validFormat = isValid && Math.abs((item.quantity * item.unitPrice) - item.total) < 0.1;
-    
-    if (!isValid) {
-      console.log('Invalid item:', item); // Debug log for invalid items
-    }
-    
-    return true; // Keep all items but mark them as valid/invalid
+    // Check if the total matches the calculation (allowing for small rounding differences)
+    const hasValidTotal = Math.abs(expectedTotal - total) < 0.1;
+
+    // If total doesn't match calculation, use the calculated total
+    const correctedTotal = hasValidTotal ? total : expectedTotal;
+
+    return {
+      productName: item.productName,
+      quantity: quantity,
+      unitPrice: unitPrice,
+      total: correctedTotal,
+      validFormat: hasValidNumbers && hasValidTotal
+    };
   });
 
-  if (validItems.length === 0) {
+  // Filter out any items with invalid numbers
+  const filteredItems = validItems.filter(item => 
+    !isNaN(item.quantity) && 
+    !isNaN(item.unitPrice) && 
+    !isNaN(item.total) &&
+    item.quantity > 0 &&
+    item.unitPrice > 0
+  );
+
+  if (filteredItems.length === 0) {
     throw new Error('Nenhum item válido encontrado no recibo');
   }
 
   return {
-    items: validItems,
+    items: filteredItems,
     storeName: data.store_info.name || 'Estabelecimento não identificado'
   };
 };

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Receipt, ReceiptItem } from "@/types/receipt";
 import { validateReceiptData } from "@/utils/receiptUtils";
@@ -70,11 +69,9 @@ export const processReceipt = async (file: File) => {
 };
 
 export const saveReceipt = async (items: any[], storeName: string, userId: string) => {
+  // Calculate total based on corrected item totals
   const total = items.reduce((acc: number, item: any) => {
-    if (item.validFormat && item.total) {
-      return acc + Number(item.total);
-    }
-    return acc;
+    return acc + Number(item.total);
   }, 0);
 
   // Convert ReceiptItem[] to a plain object array that matches Json type
