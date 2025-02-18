@@ -14,9 +14,20 @@ async function analyzeWithRetry(model: any, prompt: any, imageParts: any, maxRet
     try {
       console.log(`Tentativa ${attempt} de ${maxRetries}`);
       const result = await model.generateContent([prompt, imageParts]);
-      const response = await result.response;
-      console.log('Resposta do modelo:', response.text());
-      return response;
+      
+      if (!result || !result.response) {
+        throw new Error('Resposta vazia do modelo');
+      }
+
+      const response = result.response;
+      const text = response.text();
+      
+      if (!text) {
+        throw new Error('Texto vazio na resposta');
+      }
+
+      console.log(`Resposta obtida na tentativa ${attempt}:`, text);
+      return text;
     } catch (error) {
       console.error(`Erro na tentativa ${attempt}:`, error);
       
@@ -98,36 +109,25 @@ Retorne apenas o JSON, sem explicações adicionais.`
     }
 
     console.log('Iniciando análise do recibo...')
-    const response = await analyzeWithRetry(model, prompt, imageParts);
-    const responseText = response.text();
-    console.log('Texto da resposta:', responseText);
+    const responseText = await analyzeWithRetry(model, prompt, imageParts);
 
-    let parsedData;
+    if (!responseText) {
+      throw new Error('Resposta vazia do modelo');
+    }
+
     try {
-      // Remove any potential markdown formatting
+      // Remove qualquer formatação markdown e limpa o texto
       const cleanJson = responseText.replace(/```json\n?|\n?```/g, '').trim();
       console.log('JSON limpo:', cleanJson);
       
-      parsedData = JSON.parse(cleanJson);
+      const parsedData = JSON.parse(cleanJson);
       
-      // Validação detalhada da estrutura
-      if (!parsedData.store_info?.name) {
-        throw new Error('store_info.name não encontrado');
-      }
-      if (!parsedData.store_info?.date) {
-        throw new Error('store_info.date não encontrado');
-      }
-      if (!Array.isArray(parsedData.items)) {
-        throw new Error('items não é um array');
-      }
-      if (parsedData.items.length === 0) {
-        throw new Error('nenhum item encontrado');
-      }
-      if (typeof parsedData.total !== 'number') {
-        throw new Error('total inválido');
+      // Validação rápida da estrutura
+      if (!parsedData.store_info?.name || !parsedData.items || !Array.isArray(parsedData.items)) {
+        throw new Error('Formato de resposta inválido');
       }
 
-      console.log('Análise completa:', JSON.stringify(parsedData, null, 2));
+      console.log('Dados processados com sucesso:', JSON.stringify(parsedData, null, 2));
       
       return new Response(
         JSON.stringify({ result: cleanJson }),
@@ -155,7 +155,7 @@ Retorne apenas o JSON, sem explicações adicionais.`
     return new Response(
       JSON.stringify({ 
         error: errorMessage,
-        details: error.stack // Adiciona stack trace para debug
+        details: error.stack
       }),
       { 
         headers: { 
