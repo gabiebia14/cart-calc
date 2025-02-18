@@ -38,7 +38,7 @@ const Receipts = () => {
             quantity: Number(item.quantity),
             unitPrice: Number(item.unitPrice),
             total: Number(item.total),
-            validFormat: item.validFormat
+            validFormat: Boolean(item.validFormat)
           }))
         }));
         setReceipts(typedReceipts);
@@ -166,24 +166,27 @@ const Receipts = () => {
         return acc;
       }, 0);
 
-      // Criação do recibo com a tipagem correta
-      const newReceipt: Omit<Receipt, 'id'> = {
+      // Primeiro criamos o objeto ReceiptItem[]
+      const typedItems: ReceiptItem[] = items.map(item => ({
+        productName: item.productName,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice),
+        total: Number(item.total),
+        validFormat: Boolean(item.validFormat)
+      }));
+
+      // Depois convertemos para o formato que o Supabase espera
+      const supabaseReceipt = {
         data_compra: new Date().toISOString(),
         mercado: storeName,
         total: total,
-        items: items.map(item => ({
-          productName: item.productName,
-          quantity: Number(item.quantity),
-          unitPrice: Number(item.unitPrice),
-          total: Number(item.total),
-          validFormat: Boolean(item.validFormat)
-        })),
+        items: typedItems as unknown as Json,
         user_id: session.user.id
       };
 
       const { error: dbError, data: receipt } = await supabase
         .from('receipts')
-        .insert([newReceipt])
+        .insert([supabaseReceipt])
         .select()
         .single();
 
@@ -192,9 +195,16 @@ const Receipts = () => {
       }
 
       if (receipt) {
+        // Convertemos o recibo recebido para nosso tipo Receipt
         const typedReceipt: Receipt = {
           ...receipt,
-          items: receipt.items as ReceiptItem[]
+          items: (receipt.items as any[]).map(item => ({
+            productName: item.productName,
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unitPrice),
+            total: Number(item.total),
+            validFormat: Boolean(item.validFormat)
+          }))
         };
         setReceipts([typedReceipt, ...receipts]);
         toast.success(`Recibo processado com sucesso! ${items.length} itens encontrados.`);
