@@ -6,6 +6,7 @@ import { ExpenseHighlightCard } from "@/components/ExpenseHighlightCard";
 import { ExpenseCharts } from "@/components/ExpenseCharts";
 import { TopProductsList } from "@/components/TopProductsList";
 import { supabase } from "@/integrations/supabase/client";
+import { Receipt, ReceiptItem } from "@/types/receipt";
 
 const Index = () => {
   const [totalExpenses, setTotalExpenses] = useState({
@@ -17,9 +18,9 @@ const Index = () => {
     quantity: 0,
     total: 0
   });
-  const [monthlyData, setMonthlyData] = useState([]);
-  const [marketDistribution, setMarketDistribution] = useState([]);
-  const [topProducts, setTopProducts] = useState([]);
+  const [monthlyData, setMonthlyData] = useState<Array<{name: string, value: number}>>([]);
+  const [marketDistribution, setMarketDistribution] = useState<Array<{name: string, value: number}>>([]);
+  const [topProducts, setTopProducts] = useState<Array<{name: string, quantity: number, total: number}>>([]);
 
   useEffect(() => {
     fetchData();
@@ -35,26 +36,26 @@ const Index = () => {
 
       if (receipts) {
         // Calcular total de gastos
-        const total = receipts.reduce((acc, receipt) => acc + receipt.total, 0);
+        const total = receipts.reduce((acc, receipt) => acc + Number(receipt.total), 0);
         setTotalExpenses({
           value: total,
           purchases: receipts.length
         });
 
         // Extrair e processar itens dos recibos
-        const allItems = receipts.flatMap(receipt => receipt.items || []);
+        const allItems = receipts.flatMap(receipt => (receipt.items || []) as ReceiptItem[]);
         
         // Encontrar produto mais comprado
-        const productCount = {};
-        const productTotals = {};
+        const productCount: { [key: string]: number } = {};
+        const productTotals: { [key: string]: number } = {};
         
         allItems.forEach(item => {
           if (!productCount[item.productName]) {
             productCount[item.productName] = 0;
             productTotals[item.productName] = 0;
           }
-          productCount[item.productName] += item.quantity;
-          productTotals[item.productName] += item.total;
+          productCount[item.productName] += Number(item.quantity);
+          productTotals[item.productName] += Number(item.total);
         });
 
         const mostBought = Object.entries(productCount)
@@ -69,10 +70,10 @@ const Index = () => {
         }
 
         // Gerar dados para o gráfico mensal
-        const monthlyExpenses = receipts.reduce((acc, receipt) => {
+        const monthlyExpenses = receipts.reduce((acc: { [key: string]: number }, receipt) => {
           const month = new Date(receipt.data_compra).toLocaleString('pt-BR', { month: 'short' });
           if (!acc[month]) acc[month] = 0;
-          acc[month] += receipt.total;
+          acc[month] += Number(receipt.total);
           return acc;
         }, {});
 
@@ -82,9 +83,9 @@ const Index = () => {
         })));
 
         // Gerar distribuição por mercado
-        const marketTotals = receipts.reduce((acc, receipt) => {
+        const marketTotals = receipts.reduce((acc: { [key: string]: number }, receipt) => {
           if (!acc[receipt.mercado]) acc[receipt.mercado] = 0;
-          acc[receipt.mercado] += receipt.total;
+          acc[receipt.mercado] += Number(receipt.total);
           return acc;
         }, {});
 
