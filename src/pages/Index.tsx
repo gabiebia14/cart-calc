@@ -1,52 +1,115 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { Bell } from "lucide-react";
 import { ExpenseHighlightCard } from "@/components/ExpenseHighlightCard";
 import { ExpenseCharts } from "@/components/ExpenseCharts";
 import { TopProductsList } from "@/components/TopProductsList";
-
-// Dados mockados para exemplo
-const mockData = {
-  totalExpenses: {
-    value: 1250.75,
-    purchases: 15
-  },
-  highestExpense: {
-    value: 350.00,
-    product: "iPhone 15 Pro",
-    market: "Magazine Luiza"
-  },
-  mostBoughtProduct: {
-    name: "Café em Grãos",
-    quantity: 8,
-    total: 280.00
-  },
-  monthlyData: [
-    { name: 'Jan', value: 1200 },
-    { name: 'Fev', value: 900 },
-    { name: 'Mar', value: 1500 },
-    { name: 'Abr', value: 1100 },
-    { name: 'Mai', value: 1300 },
-    { name: 'Jun', value: 1250 },
-  ],
-  marketDistribution: [
-    { name: 'Carrefour', value: 400 },
-    { name: 'Extra', value: 300 },
-    { name: 'Assaí', value: 200 },
-    { name: 'Dia', value: 150 },
-    { name: 'Outros', value: 200 },
-  ],
-  topProducts: [
-    { name: "Café em Grãos", quantity: 8, total: 280.00 },
-    { name: "Leite Integral", quantity: 12, total: 89.88 },
-    { name: "Pão Integral", quantity: 6, total: 54.00 },
-    { name: "Arroz", quantity: 4, total: 95.60 },
-    { name: "Azeite", quantity: 3, total: 89.97 },
-  ]
-};
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const [totalExpenses, setTotalExpenses] = useState({
+    value: 0,
+    purchases: 0
+  });
+  const [mostBoughtProduct, setMostBoughtProduct] = useState({
+    name: "",
+    quantity: 0,
+    total: 0
+  });
+  const [monthlyData, setMonthlyData] = useState([]);
+  const [marketDistribution, setMarketDistribution] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const { data: receipts, error } = await supabase
+        .from('receipts')
+        .select('*');
+
+      if (error) throw error;
+
+      if (receipts) {
+        // Calcular total de gastos
+        const total = receipts.reduce((acc, receipt) => acc + receipt.total, 0);
+        setTotalExpenses({
+          value: total,
+          purchases: receipts.length
+        });
+
+        // Extrair e processar itens dos recibos
+        const allItems = receipts.flatMap(receipt => receipt.items || []);
+        
+        // Encontrar produto mais comprado
+        const productCount = {};
+        const productTotals = {};
+        
+        allItems.forEach(item => {
+          if (!productCount[item.productName]) {
+            productCount[item.productName] = 0;
+            productTotals[item.productName] = 0;
+          }
+          productCount[item.productName] += item.quantity;
+          productTotals[item.productName] += item.total;
+        });
+
+        const mostBought = Object.entries(productCount)
+          .sort(([,a], [,b]) => b - a)[0];
+
+        if (mostBought) {
+          setMostBoughtProduct({
+            name: mostBought[0],
+            quantity: mostBought[1],
+            total: productTotals[mostBought[0]]
+          });
+        }
+
+        // Gerar dados para o gráfico mensal
+        const monthlyExpenses = receipts.reduce((acc, receipt) => {
+          const month = new Date(receipt.data_compra).toLocaleString('pt-BR', { month: 'short' });
+          if (!acc[month]) acc[month] = 0;
+          acc[month] += receipt.total;
+          return acc;
+        }, {});
+
+        setMonthlyData(Object.entries(monthlyExpenses).map(([name, value]) => ({
+          name,
+          value
+        })));
+
+        // Gerar distribuição por mercado
+        const marketTotals = receipts.reduce((acc, receipt) => {
+          if (!acc[receipt.mercado]) acc[receipt.mercado] = 0;
+          acc[receipt.mercado] += receipt.total;
+          return acc;
+        }, {});
+
+        setMarketDistribution(Object.entries(marketTotals)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 5));
+
+        // Gerar top produtos
+        const productList = Object.entries(productCount)
+          .map(([name, quantity]) => ({
+            name,
+            quantity,
+            total: productTotals[name]
+          }))
+          .sort((a, b) => b.quantity - a.quantity)
+          .slice(0, 5);
+
+        setTopProducts(productList);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background font-inter">
       <div className="max-w-7xl mx-auto p-4">
@@ -71,17 +134,17 @@ const Index = () => {
           <ExpenseHighlightCard
             type="total"
             title="Total de Gastos"
-            mainValue={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(mockData.totalExpenses.value)}
+            mainValue={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalExpenses.value)}
             subtitle="Este mês"
-            secondaryValue={`${mockData.totalExpenses.purchases} compras`}
+            secondaryValue={`${totalExpenses.purchases} compras`}
             icon="bag"
           />
           <ExpenseHighlightCard
             type="mostBought"
             title="Produto Mais Comprado"
-            mainValue={mockData.mostBoughtProduct.name}
-            subtitle={`${mockData.mostBoughtProduct.quantity} unidades`}
-            secondaryValue={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(mockData.mostBoughtProduct.total)}
+            mainValue={mostBoughtProduct.name || "Nenhum produto"}
+            subtitle={`${mostBoughtProduct.quantity} unidades`}
+            secondaryValue={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(mostBoughtProduct.total)}
             icon="package"
           />
         </div>
@@ -89,14 +152,14 @@ const Index = () => {
         {/* Gráficos */}
         <div className="mb-6">
           <ExpenseCharts
-            monthlyData={mockData.monthlyData}
-            marketDistribution={mockData.marketDistribution}
+            monthlyData={monthlyData}
+            marketDistribution={marketDistribution}
           />
         </div>
 
         {/* Lista de Produtos */}
         <div className="mb-20">
-          <TopProductsList products={mockData.topProducts} />
+          <TopProductsList products={topProducts} />
         </div>
       </div>
 
