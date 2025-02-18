@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { Bell } from "lucide-react";
@@ -66,7 +67,7 @@ const Index = () => {
         </div>
 
         {/* Cards de Destaque */}
-        <div className="grid gap-6 mb-6 md:grid-cols-3">
+        <div className="grid gap-6 mb-6 md:grid-cols-2">
           <ExpenseHighlightCard
             type="total"
             title="Total de Gastos"
@@ -74,14 +75,6 @@ const Index = () => {
             subtitle="Este mês"
             secondaryValue={`${mockData.totalExpenses.purchases} compras`}
             icon="bag"
-          />
-          <ExpenseHighlightCard
-            type="highest"
-            title="Maior Gasto"
-            mainValue={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(mockData.highestExpense.value)}
-            subtitle={mockData.highestExpense.market}
-            secondaryValue={mockData.highestExpense.product}
-            icon="trending"
           />
           <ExpenseHighlightCard
             type="mostBought"
