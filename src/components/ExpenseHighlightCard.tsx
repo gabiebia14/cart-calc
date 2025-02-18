@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { ShoppingBag, TrendingUp, Package } from "lucide-react";
 
@@ -28,18 +29,18 @@ export const ExpenseHighlightCard = ({
   
   return (
     <Card className="shadow-sm">
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start mb-4">
+      <CardContent className="p-3">
+        <div className="flex justify-between items-start mb-2">
           <div>
-            <h2 className="font-semibold text-lg text-foreground">{title}</h2>
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
+            <h2 className="font-semibold text-base text-foreground">{title}</h2>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
-          <Icon className="text-primary" size={20} />
+          <Icon className="text-primary" size={16} />
         </div>
-        <div className="space-y-2">
-          <span className="text-2xl font-bold text-primary">{mainValue}</span>
+        <div className="space-y-1">
+          <span className="text-xl font-bold text-primary">{mainValue}</span>
           {secondaryValue && (
-            <p className="text-sm text-muted-foreground">{secondaryValue}</p>
+            <p className="text-xs text-muted-foreground">{secondaryValue}</p>
           )}
         </div>
       </CardContent>
