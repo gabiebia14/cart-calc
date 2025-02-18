@@ -63,7 +63,10 @@ export const processReceipt = async (file: File) => {
     throw new Error('Erro ao analisar o recibo: ' + functionResponse.error.message);
   }
 
-  return functionResponse.data.result;
+  // Limpa a resposta de markdown caso necessário
+  const result = functionResponse.data.result;
+  const cleanedResult = result.replace(/```json\n|\n```/g, '');
+  return cleanedResult;
 };
 
 export const saveReceipt = async (items: any[], storeName: string, userId: string) => {
