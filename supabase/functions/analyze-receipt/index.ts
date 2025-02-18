@@ -7,10 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Função para dormir por um tempo específico
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Função para tentar a análise com retentativas
 async function analyzeWithRetry(model: any, prompt: any, imageParts: any, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -24,8 +22,7 @@ async function analyzeWithRetry(model: any, prompt: any, imageParts: any, maxRet
         throw error;
       }
       
-      // Se o erro for de sobrecarga, espera um pouco mais a cada tentativa
-      const waitTime = attempt * 2000; // 2s, 4s, 6s
+      const waitTime = attempt * 2000;
       console.log(`Aguardando ${waitTime}ms antes da próxima tentativa...`);
       await sleep(waitTime);
     }
@@ -49,15 +46,24 @@ serve(async (req) => {
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
       generationConfig: {
-        temperature: 0.4,
-        topP: 0.8,
-        topK: 40,
+        temperature: 0.1, // Reduzido para maior precisão
+        topP: 0.1,
+        topK: 16,
         maxOutputTokens: 8192,
       }
     })
 
     const prompt = {
-      text: `Você é um agente extrator de dados de recibos de supermercado. Analise esta imagem de recibo e retorne SOMENTE um JSON com a estrutura abaixo:
+      text: `Você é um agente extrator de dados de recibos de supermercado. Analise esta imagem e extraia os dados EXATAMENTE como mostrado no recibo.
+
+Para cada item, retorne:
+1. productName: nome do produto exatamente como está no recibo
+2. quantity: quantidade exata do produto (pode ser decimal)
+3. unitPrice: preço unitário do produto
+4. total: valor total do item exatamente como está no recibo
+5. validFormat: true se o total for igual a quantity * unitPrice (com margem de erro de 0.01), false caso contrário
+
+Retorne SOMENTE um JSON com a estrutura:
 
 {
   "store_info": {
@@ -74,12 +80,14 @@ serve(async (req) => {
   ]
 }
 
-Use ponto como separador decimal. Se houver erro nos cálculos (ex: quantity * unitPrice ≠ total), marque validFormat como false.
-
-NÃO INCLUA explicações adicionais, somente o JSON.`
+IMPORTANTE:
+- Mantenha os valores EXATAMENTE como aparecem no recibo
+- Não faça cálculos ou correções nos valores
+- Use ponto como separador decimal
+- Marque validFormat como false se houver qualquer discrepância entre quantity * unitPrice e total
+- NÃO inclua nenhuma explicação, apenas o JSON`
     }
 
-    // Convert file to base64 more efficiently
     const buffer = await file.arrayBuffer()
     const bytes = new Uint8Array(buffer)
     const chunks: string[] = []
@@ -95,7 +103,7 @@ NÃO INCLUA explicações adicionais, somente o JSON.`
       }
     }
 
-    console.log('Analisando imagem do recibo com retentativas...')
+    console.log('Analisando imagem do recibo...')
     const response = await analyzeWithRetry(model, prompt, imageParts);
     const text = response.text()
     console.log('Análise completa:', text)
