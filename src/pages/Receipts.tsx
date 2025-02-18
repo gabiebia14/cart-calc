@@ -78,6 +78,7 @@ const Receipts = () => {
       let parsedData;
       try {
         parsedData = JSON.parse(receiptData);
+        console.log('Parsed receipt data:', parsedData); // Debug log
       } catch (e) {
         console.error('Error parsing receipt data:', e);
         throw new Error('Erro ao processar dados do recibo');
