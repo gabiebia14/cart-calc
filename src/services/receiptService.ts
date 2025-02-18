@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Receipt, ReceiptItem } from "@/types/receipt";
 import { validateReceiptData } from "@/utils/receiptUtils";
+import { Json } from "@/integrations/supabase/types";
 
 export const fetchReceiptsList = async () => {
   const { data, error } = await supabase
@@ -73,19 +74,20 @@ export const saveReceipt = async (items: any[], storeName: string, userId: strin
     return acc;
   }, 0);
 
-  const typedItems: ReceiptItem[] = items.map(item => ({
+  // Convert ReceiptItem[] to a plain object array that matches Json type
+  const jsonItems = items.map(item => ({
     productName: item.productName,
     quantity: Number(item.quantity),
     unitPrice: Number(item.unitPrice),
     total: Number(item.total),
     validFormat: Boolean(item.validFormat)
-  }));
+  })) as Json;
 
   const supabaseReceipt = {
     data_compra: new Date().toISOString(),
     mercado: storeName,
     total: total,
-    items: typedItems,
+    items: jsonItems,
     user_id: userId
   };
 
