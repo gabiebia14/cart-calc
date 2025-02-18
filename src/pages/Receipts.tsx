@@ -30,7 +30,19 @@ const Receipts = () => {
 
       if (error) throw error;
 
-      setReceipts(data || []);
+      if (data) {
+        const typedReceipts: Receipt[] = data.map(receipt => ({
+          ...receipt,
+          items: (receipt.items as any[]).map(item => ({
+            productName: item.productName,
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unitPrice),
+            total: Number(item.total),
+            validFormat: item.validFormat
+          }))
+        }));
+        setReceipts(typedReceipts);
+      }
     } catch (error: any) {
       console.error('Error fetching receipts:', error);
       setError('Não foi possível carregar os recibos. Tente novamente mais tarde.');

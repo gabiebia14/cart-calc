@@ -52,7 +52,7 @@ export const EditReceiptModal = ({ receipt, isOpen, onClose, onUpdate }: EditRec
 
       const { error } = await supabase
         .from('receipts')
-        .update(updatedReceipt)
+        .update({ ...updatedReceipt, items: JSON.parse(JSON.stringify(items)) })
         .eq('id', receipt.id);
 
       if (error) throw error;

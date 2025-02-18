@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { Bell } from "lucide-react";
@@ -43,7 +42,16 @@ const Index = () => {
         });
 
         // Extrair e processar itens dos recibos
-        const allItems = receipts.flatMap(receipt => (receipt.items || []) as ReceiptItem[]);
+        const allItems = receipts.flatMap(receipt => {
+          const items = receipt.items as any[];
+          return items ? items.map(item => ({
+            productName: item.productName,
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unitPrice),
+            total: Number(item.total),
+            validFormat: item.validFormat
+          })) : [];
+        });
         
         // Encontrar produto mais comprado
         const productCount: { [key: string]: number } = {};
