@@ -9,6 +9,36 @@ const corsHeaders = {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+function parseNumber(value: string | number): number {
+  if (typeof value === 'number') return value;
+  // Remove R$ e converte vírgula para ponto
+  return Number(value.replace('R$', '').replace(',', '.').trim());
+}
+
+function validateReceipt(data: any) {
+  if (!data.store_info?.name) {
+    throw new Error('Nome do estabelecimento não encontrado');
+  }
+
+  if (!Array.isArray(data.items) || data.items.length === 0) {
+    throw new Error('Lista de itens inválida');
+  }
+
+  // Processa o total e itens
+  if (typeof data.total === 'string') {
+    data.total = parseNumber(data.total);
+  }
+
+  data.items = data.items.map((item: any) => ({
+    ...item,
+    quantity: parseNumber(item.quantity),
+    unitPrice: parseNumber(item.unitPrice),
+    total: parseNumber(item.total)
+  }));
+
+  return data;
+}
+
 async function analyzeWithRetry(model: any, prompt: any, imageParts: any, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -84,9 +114,8 @@ serve(async (req) => {
 
 Regras importantes:
 - Preserve EXATAMENTE a grafia original dos produtos
-- Use ponto como separador decimal
+- Mantenha os valores numéricos como strings, incluindo o símbolo R$ quando presente
 - Não arredonde valores, mantenha exatamente como está no recibo
-- Não inclua símbolos de moeda (R$) nos valores numéricos
 - Inclua todos os itens do recibo, mesmo que repetidos
 
 Retorne apenas o JSON, sem explicações adicionais.`
@@ -118,19 +147,17 @@ Retorne apenas o JSON, sem explicações adicionais.`
     try {
       // Remove qualquer formatação markdown e limpa o texto
       const cleanJson = responseText.replace(/```json\n?|\n?```/g, '').trim();
-      console.log('JSON limpo:', cleanJson);
+      console.log('JSON recebido:', cleanJson);
       
-      const parsedData = JSON.parse(cleanJson);
-      
-      // Validação rápida da estrutura
-      if (!parsedData.store_info?.name || !parsedData.items || !Array.isArray(parsedData.items)) {
-        throw new Error('Formato de resposta inválido');
-      }
+      let parsedData = JSON.parse(cleanJson);
+      console.log('JSON parseado:', parsedData);
 
-      console.log('Dados processados com sucesso:', JSON.stringify(parsedData, null, 2));
+      // Valida e processa os números
+      parsedData = validateReceipt(parsedData);
+      console.log('Dados processados:', parsedData);
       
       return new Response(
-        JSON.stringify({ result: cleanJson }),
+        JSON.stringify({ result: JSON.stringify(parsedData) }),
         { 
           headers: { 
             ...corsHeaders, 
