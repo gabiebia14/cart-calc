@@ -1,13 +1,20 @@
+
 import { BottomNav } from "@/components/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis } from 'recharts';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useDebounce } from "@/hooks/use-debounce";
 
 const ProductAnalysis = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [products, setProducts] = useState<string[]>([]);
+  const debouncedSearch = useDebounce(searchTerm, 300);
+
   // Mock data - replace with real data later
   const priceHistory = [
     { date: '2024-01', price: 5.99 },
@@ -21,6 +28,46 @@ const ProductAnalysis = () => {
     { date: '2024-03-15', price: 5.79, market: 'Mercado B', quantity: 1 },
     { date: '2024-02-28', price: 6.49, market: 'Mercado C', quantity: 3 },
   ];
+
+  useEffect(() => {
+    const searchProducts = async () => {
+      if (debouncedSearch.length < 3) {
+        setProducts([]);
+        return;
+      }
+
+      try {
+        const { data: receipts, error } = await supabase
+          .from('receipts')
+          .select('items')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching products:', error);
+          return;
+        }
+
+        if (receipts) {
+          // Extrair todos os nomes de produtos únicos dos recibos
+          const allProducts = new Set<string>();
+          receipts.forEach(receipt => {
+            const items = receipt.items as any[];
+            items.forEach(item => {
+              if (item.productName.toLowerCase().includes(debouncedSearch.toLowerCase())) {
+                allProducts.add(item.productName);
+              }
+            });
+          });
+
+          setProducts(Array.from(allProducts));
+        }
+      } catch (error) {
+        console.error('Error searching products:', error);
+      }
+    };
+
+    searchProducts();
+  }, [debouncedSearch]);
 
   return (
     <div className="min-h-screen bg-background font-inter">
@@ -37,15 +84,37 @@ const ProductAnalysis = () => {
           </div>
         </div>
 
-        {/* Filter */}
+        {/* Search */}
         <div className="mb-6">
           <div className="relative">
             <Input 
               placeholder="Buscar produtos..."
               className="w-full pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
             <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
           </div>
+          
+          {/* Search Results */}
+          {products.length > 0 && searchTerm.length >= 3 && (
+            <div className="mt-2 absolute z-10 w-full max-w-md bg-background border rounded-md shadow-lg">
+              <ul className="py-2">
+                {products.map((product, index) => (
+                  <li 
+                    key={index}
+                    className="px-4 py-2 hover:bg-secondary cursor-pointer"
+                    onClick={() => {
+                      setSearchTerm(product);
+                      // TODO: Implementar seleção do produto
+                    }}
+                  >
+                    {product}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Product Statistics */}
