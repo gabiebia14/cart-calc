@@ -57,16 +57,26 @@ serve(async (req) => {
     })
 
     const prompt = {
-      text: `Você é um agente extrator de dados de recibos de supermercado. Analise esta imagem de recibo e retorne um array JSON com os itens encontrados. Para cada item inclua:
-      - productName (string): nome do produto
-      - quantity (number): quantidade comprada
-      - unitPrice (number): preço unitário
-      - total (number): preço total
-      - validFormat (boolean): indica se a linha foi processada corretamente
-      
-      Use ponto como separador decimal. Se houver erro nos cálculos (ex: quantity * unitPrice ≠ total), marque validFormat como false.
-      
-      Retorne apenas o JSON, sem explicações adicionais.`
+      text: `Você é um agente extrator de dados de recibos de supermercado. Analise esta imagem de recibo e retorne SOMENTE um JSON com a estrutura abaixo:
+
+{
+  "store_info": {
+    "name": "NOME DO ESTABELECIMENTO"
+  },
+  "items": [
+    {
+      "productName": "string",
+      "quantity": number,
+      "unitPrice": number,
+      "total": number,
+      "validFormat": boolean
+    }
+  ]
+}
+
+Use ponto como separador decimal. Se houver erro nos cálculos (ex: quantity * unitPrice ≠ total), marque validFormat como false.
+
+NÃO INCLUA explicações adicionais, somente o JSON.`
     }
 
     // Convert file to base64 more efficiently
