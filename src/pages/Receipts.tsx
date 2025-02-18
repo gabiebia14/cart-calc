@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ReceiptList } from "@/components/ReceiptList";
 import { ReceiptUploader } from "@/components/ReceiptUploader";
 import { useState, useEffect } from "react";
-import { Receipt } from "@/types/receipt";
+import { Receipt, ReceiptItem } from "@/types/receipt";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -166,12 +166,18 @@ const Receipts = () => {
         return acc;
       }, 0);
 
-      // Criação do recibo
-      const newReceipt = {
+      // Criação do recibo com a tipagem correta
+      const newReceipt: Omit<Receipt, 'id'> = {
         data_compra: new Date().toISOString(),
         mercado: storeName,
         total: total,
-        items: items,
+        items: items.map(item => ({
+          productName: item.productName,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          total: Number(item.total),
+          validFormat: Boolean(item.validFormat)
+        })),
         user_id: session.user.id
       };
 
@@ -186,7 +192,11 @@ const Receipts = () => {
       }
 
       if (receipt) {
-        setReceipts([receipt, ...receipts]);
+        const typedReceipt: Receipt = {
+          ...receipt,
+          items: receipt.items as ReceiptItem[]
+        };
+        setReceipts([typedReceipt, ...receipts]);
         toast.success(`Recibo processado com sucesso! ${items.length} itens encontrados.`);
       }
     } catch (error: any) {
