@@ -43,7 +43,6 @@ const Receipts = () => {
   const handleDelete = async (id: string) => {
     try {
       setError(null);
-      // Primeiro remove o recibo do estado para feedback imediato
       setReceipts(receipts.filter(receipt => receipt.id !== id));
       
       const { error } = await supabase
@@ -52,7 +51,6 @@ const Receipts = () => {
         .eq('id', id);
 
       if (error) {
-        // Se houver erro, reverte a remoção
         await fetchReceipts();
         throw error;
       }
@@ -65,12 +63,12 @@ const Receipts = () => {
     }
   };
 
-  const validateReceiptData = (items: any[]) => {
-    if (!Array.isArray(items)) {
+  const validateReceiptData = (data: any) => {
+    if (!data.store_info || !data.items || !Array.isArray(data.items)) {
       throw new Error('Formato de dados inválido');
     }
 
-    const validItems = items.filter(item => {
+    const validItems = data.items.filter(item => {
       return (
         item.productName &&
         typeof item.quantity === 'number' &&
@@ -84,7 +82,10 @@ const Receipts = () => {
       throw new Error('Nenhum item válido encontrado no recibo');
     }
 
-    return validItems;
+    return {
+      items: validItems,
+      storeName: data.store_info.name || 'Estabelecimento não identificado'
+    };
   };
 
   const handleUpload = async (file: File) => {
@@ -136,17 +137,17 @@ const Receipts = () => {
       const receiptData = functionResponse.data.result;
       let parsedData;
       try {
-        parsedData = JSON.parse(receiptData.replace(/```json\n|\n```/g, ''));
+        parsedData = JSON.parse(receiptData);
       } catch (e) {
         console.error('Error parsing receipt data:', e);
         throw new Error('Erro ao processar dados do recibo');
       }
 
       // Validação dos dados
-      const validatedItems = validateReceiptData(parsedData);
+      const { items, storeName } = validateReceiptData(parsedData);
 
       // Cálculo do total
-      const total = validatedItems.reduce((acc: number, item: any) => {
+      const total = items.reduce((acc: number, item: any) => {
         if (item.validFormat && item.total) {
           return acc + Number(item.total);
         }
@@ -156,9 +157,9 @@ const Receipts = () => {
       // Criação do recibo
       const newReceipt = {
         data_compra: new Date().toISOString(),
-        mercado: 'Mercado Local',
+        mercado: storeName,
         total: total,
-        items: validatedItems,
+        items: items,
         user_id: session.user.id
       };
 
@@ -174,7 +175,7 @@ const Receipts = () => {
 
       if (receipt) {
         setReceipts([receipt, ...receipts]);
-        toast.success(`Recibo processado com sucesso! ${validatedItems.length} itens encontrados.`);
+        toast.success(`Recibo processado com sucesso! ${items.length} itens encontrados.`);
       }
     } catch (error: any) {
       console.error('Error uploading receipt:', error);
