@@ -20,7 +20,7 @@ export const validateReceiptData = (data: any) => {
     throw new Error('Formato de dados inválido');
   }
 
-  // Validar e normalizar os itens sem modificar os valores originais
+  // Validar e normalizar os itens mantendo os valores originais
   const validItems = data.items.map(item => {
     // Converter strings para números se necessário
     const quantity = Number(item.quantity);
@@ -33,13 +33,29 @@ export const validateReceiptData = (data: any) => {
       return null;
     }
 
-    // Manter os valores originais e apenas verificar a validFormat
+    // Calcular o total esperado (quantidade * preço unitário)
+    const expectedTotal = quantity * unitPrice;
+    
+    // Comparar o total calculado com o total do recibo
+    // Usamos uma margem de erro pequena para lidar com arredondamentos
+    const isValidTotal = Math.abs(expectedTotal - total) <= 0.01;
+
+    console.log('Validating item:', {
+      product: item.productName,
+      quantity,
+      unitPrice,
+      total,
+      expectedTotal,
+      isValid: isValidTotal
+    });
+
+    // Retornar o item com os valores originais e o status de validação
     return {
       productName: item.productName,
       quantity: quantity,
       unitPrice: unitPrice,
       total: total,
-      validFormat: Math.abs((quantity * unitPrice) - total) < 0.01
+      validFormat: isValidTotal
     };
   }).filter(item => item !== null);
 
