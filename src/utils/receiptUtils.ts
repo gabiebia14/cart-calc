@@ -22,42 +22,66 @@ export const validateReceiptData = (data: any) => {
 
   // Validar e normalizar os itens mantendo os valores originais
   const validItems = data.items.map(item => {
-    // Converter strings para números se necessário
-    const quantity = Number(item.quantity);
-    const unitPrice = Number(item.unitPrice);
-    const total = Number(item.total);
+    try {
+      // Converter strings para números se necessário e remover símbolos monetários
+      const quantity = Number(String(item.quantity).replace(/[^\d.-]/g, ''));
+      const total = Number(String(item.total).replace(/[^\d.-]/g, ''));
+      let unitPrice = item.unitPrice ? Number(String(item.unitPrice).replace(/[^\d.-]/g, '')) : null;
 
-    // Verificar se os números são válidos
-    if (isNaN(quantity) || isNaN(unitPrice) || isNaN(total) || !item.productName) {
-      console.error('Invalid item values:', item);
-      return null;
+      // Verificar se os números básicos são válidos
+      if (isNaN(quantity) || isNaN(total) || !item.productName) {
+        console.error('Invalid basic values:', item);
+        return {
+          productName: item.productName || '',
+          quantity: quantity,
+          unitPrice: unitPrice || 0,
+          total: total,
+          validFormat: false
+        };
+      }
+
+      // Caso de 3 colunas: calcular preço unitário
+      if (unitPrice === null) {
+        unitPrice = total / quantity;
+        console.log('Calculated unit price for 3-column format:', {
+          product: item.productName,
+          unitPrice,
+          quantity,
+          total
+        });
+      }
+
+      // Validar o formato com base no número de colunas e cálculos
+      const calculatedTotal = quantity * unitPrice;
+      const isValidFormat = Math.abs(calculatedTotal - total) <= 0.01;
+
+      console.log('Validation result:', {
+        product: item.productName,
+        quantity,
+        unitPrice,
+        total,
+        calculatedTotal,
+        isValid: isValidFormat
+      });
+
+      return {
+        productName: item.productName,
+        quantity: quantity,
+        unitPrice: unitPrice,
+        total: total,
+        validFormat: isValidFormat
+      };
+    } catch (error) {
+      console.error('Error processing item:', error, item);
+      return {
+        productName: item.productName || '',
+        quantity: 0,
+        unitPrice: 0,
+        total: 0,
+        validFormat: false
+      };
     }
-
-    // Calcular o total esperado (quantidade * preço unitário)
-    const expectedTotal = quantity * unitPrice;
-    
-    // Comparar o total calculado com o total do recibo
-    // Usamos uma margem de erro pequena para lidar com arredondamentos
-    const isValidTotal = Math.abs(expectedTotal - total) <= 0.01;
-
-    console.log('Validating item:', {
-      product: item.productName,
-      quantity,
-      unitPrice,
-      total,
-      expectedTotal,
-      isValid: isValidTotal
-    });
-
-    // Retornar o item com os valores originais e o status de validação
-    return {
-      productName: item.productName,
-      quantity: quantity,
-      unitPrice: unitPrice,
-      total: total,
-      validFormat: isValidTotal
-    };
-  }).filter(item => item !== null);
+  });
 
   if (validItems.length === 0) {
     throw new Error('Nenhum item válido encontrado no recibo');
