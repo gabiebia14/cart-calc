@@ -3,46 +3,42 @@ import React, { useEffect, useRef } from 'react';
 
 export const ChartWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>();
+  const resizeObserverRef = useRef<ResizeObserver>();
 
   useEffect(() => {
-    let rafId: number;
-    let resizeObserver: ResizeObserver | null = null;
+    if (!wrapperRef.current) return;
 
-    if (wrapperRef.current) {
-      resizeObserver = new ResizeObserver((entries) => {
-        // Cancel any existing animation frame
-        if (rafId) {
-          cancelAnimationFrame(rafId);
+    const handleResize = (entries: ResizeObserverEntry[]) => {
+      // Cancelar qualquer frame de animação pendente
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+
+      // Agendar nova atualização
+      rafRef.current = requestAnimationFrame(() => {
+        if (!wrapperRef.current) return;
+        
+        const entry = entries[0];
+        if (entry && entry.contentRect) {
+          // Atualizar dimensões sem forçar reflow
+          wrapperRef.current.style.width = `${entry.contentRect.width}px`;
+          wrapperRef.current.style.height = `${entry.contentRect.height}px`;
         }
-
-        // Schedule a new update
-        rafId = requestAnimationFrame(() => {
-          if (!wrapperRef.current) return;
-          // Trigger a reflow
-          wrapperRef.current.style.display = 'none';
-          wrapperRef.current.offsetHeight; // Force reflow
-          wrapperRef.current.style.display = '';
-        });
       });
+    };
 
-      resizeObserver.observe(wrapperRef.current);
-    }
+    // Criar novo ResizeObserver
+    resizeObserverRef.current = new ResizeObserver(handleResize);
+    resizeObserverRef.current.observe(wrapperRef.current);
 
-    // Cleanup function
+    // Cleanup
     return () => {
-      if (rafId) {
-        cancelAnimationFrame(rafId);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
       }
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-      if (wrapperRef.current) {
-        const observers = (window as any).__resizeObservers__ || [];
-        observers.forEach((observer: any) => {
-          if (observer.__elements?.has(wrapperRef.current)) {
-            observer.unobserve(wrapperRef.current);
-          }
-        });
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
       }
     };
   }, []);
