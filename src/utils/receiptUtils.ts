@@ -28,22 +28,34 @@ export const validateReceiptData = (data: any) => {
       const total = Number(String(item.total).replace(/[^\d.-]/g, ''));
       let unitPrice = item.unitPrice ? Number(String(item.unitPrice).replace(/[^\d.-]/g, '')) : null;
 
-      // Verificar se os números básicos são válidos
-      if (isNaN(quantity) || isNaN(total) || !item.productName) {
-        console.error('Invalid basic values:', item);
+      // Verificar se temos o mínimo necessário: nome do produto e total
+      if (isNaN(total) || !item.productName) {
+        console.error('Missing essential values:', item);
         return {
           productName: item.productName || '',
-          quantity: quantity,
-          unitPrice: unitPrice || 0,
+          quantity: quantity || 1, // Se não houver quantidade, assume 1
+          unitPrice: unitPrice || total, // Se não houver preço unitário, usa o total
           total: total,
           validFormat: false
         };
       }
 
-      // Caso de 3 colunas: calcular preço unitário
+      // Se não tiver quantidade, assume 1
+      if (isNaN(quantity)) {
+        console.log('Quantity not provided, assuming 1:', item.productName);
+        return {
+          productName: item.productName,
+          quantity: 1,
+          unitPrice: total, // Preço unitário será igual ao total
+          total: total,
+          validFormat: true // Válido pois temos o essencial: nome e total
+        };
+      }
+
+      // Se não tiver preço unitário, calculamos
       if (unitPrice === null) {
         unitPrice = total / quantity;
-        console.log('Calculated unit price for 3-column format:', {
+        console.log('Calculated unit price:', {
           product: item.productName,
           unitPrice,
           quantity,
@@ -51,31 +63,19 @@ export const validateReceiptData = (data: any) => {
         });
       }
 
-      // Validar o formato com base no número de colunas e cálculos
-      const calculatedTotal = quantity * unitPrice;
-      const isValidFormat = Math.abs(calculatedTotal - total) <= 0.01;
-
-      console.log('Validation result:', {
-        product: item.productName,
-        quantity,
-        unitPrice,
-        total,
-        calculatedTotal,
-        isValid: isValidFormat
-      });
-
+      // Sempre consideramos válido se tiver nome do produto e total
       return {
         productName: item.productName,
         quantity: quantity,
         unitPrice: unitPrice,
         total: total,
-        validFormat: isValidFormat
+        validFormat: true
       };
     } catch (error) {
       console.error('Error processing item:', error, item);
       return {
         productName: item.productName || '',
-        quantity: 0,
+        quantity: 1,
         unitPrice: 0,
         total: 0,
         validFormat: false
