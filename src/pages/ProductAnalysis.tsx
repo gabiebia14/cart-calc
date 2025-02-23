@@ -13,21 +13,100 @@ import { useDebounce } from "@/hooks/use-debounce";
 const ProductAnalysis = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [products, setProducts] = useState<string[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [priceHistory, setPriceHistory] = useState<any[]>([]);
+  const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
+  const [productStats, setProductStats] = useState<{
+    lowestPrice: { price: number; date: string; market: string } | null;
+    highestPrice: { price: number; date: string; market: string } | null;
+    totalSpent: number;
+    totalQuantity: number;
+  }>({
+    lowestPrice: null,
+    highestPrice: null,
+    totalSpent: 0,
+    totalQuantity: 0
+  });
+  
   const debouncedSearch = useDebounce(searchTerm, 300);
 
-  // Mock data - replace with real data later
-  const priceHistory = [
-    { date: '2024-01', price: 5.99 },
-    { date: '2024-02', price: 6.49 },
-    { date: '2024-03', price: 5.79 },
-    { date: '2024-04', price: 6.29 },
-  ];
+  const fetchProductHistory = async (productName: string) => {
+    try {
+      const { data: receipts, error } = await supabase
+        .from('receipts')
+        .select('*')
+        .order('data_compra', { ascending: true });
 
-  const purchaseHistory = [
-    { date: '2024-04-01', price: 6.29, market: 'Mercado A', quantity: 2 },
-    { date: '2024-03-15', price: 5.79, market: 'Mercado B', quantity: 1 },
-    { date: '2024-02-28', price: 6.49, market: 'Mercado C', quantity: 3 },
-  ];
+      if (error) throw error;
+
+      const history: any[] = [];
+      const purchases: any[] = [];
+      let lowestPrice = { price: Infinity, date: '', market: '' };
+      let highestPrice = { price: -Infinity, date: '', market: '' };
+      let totalSpent = 0;
+      let totalQuantity = 0;
+
+      receipts?.forEach(receipt => {
+        const items = receipt.items as any[];
+        items.forEach(item => {
+          if (item.productName.toLowerCase() === productName.toLowerCase()) {
+            const price = Number(item.unitPrice);
+            const quantity = Number(item.quantity);
+            const total = Number(item.total);
+            const date = new Date(receipt.data_compra).toISOString().split('T')[0];
+
+            // Adicionar ao histórico de preços
+            history.push({
+              date,
+              price
+            });
+
+            // Adicionar ao histórico de compras
+            purchases.push({
+              date,
+              price,
+              market: receipt.mercado,
+              quantity,
+              total
+            });
+
+            // Atualizar menor preço
+            if (price < lowestPrice.price) {
+              lowestPrice = {
+                price,
+                date,
+                market: receipt.mercado
+              };
+            }
+
+            // Atualizar maior preço
+            if (price > highestPrice.price) {
+              highestPrice = {
+                price,
+                date,
+                market: receipt.mercado
+              };
+            }
+
+            totalSpent += total;
+            totalQuantity += quantity;
+          }
+        });
+      });
+
+      setPriceHistory(history);
+      setPurchaseHistory(purchases);
+      setProductStats({
+        lowestPrice: lowestPrice.price !== Infinity ? lowestPrice : null,
+        highestPrice: highestPrice.price !== -Infinity ? highestPrice : null,
+        totalSpent,
+        totalQuantity
+      });
+
+    } catch (error) {
+      console.error('Error fetching product history:', error);
+    }
+  };
 
   useEffect(() => {
     const searchProducts = async () => {
@@ -48,7 +127,6 @@ const ProductAnalysis = () => {
         }
 
         if (receipts) {
-          // Extrair todos os nomes de produtos únicos dos recibos
           const allProducts = new Set<string>();
           receipts.forEach(receipt => {
             const items = receipt.items as any[];
@@ -97,7 +175,7 @@ const ProductAnalysis = () => {
           </div>
           
           {/* Search Results */}
-          {products.length > 0 && searchTerm.length >= 3 && (
+          {products.length > 0 && searchTerm.length >= 3 && !selectedProduct && (
             <div className="mt-2 absolute z-10 w-full max-w-md bg-background border rounded-md shadow-lg">
               <ul className="py-2">
                 {products.map((product, index) => (
@@ -106,7 +184,8 @@ const ProductAnalysis = () => {
                     className="px-4 py-2 hover:bg-secondary cursor-pointer"
                     onClick={() => {
                       setSearchTerm(product);
-                      // TODO: Implementar seleção do produto
+                      setSelectedProduct(product);
+                      fetchProductHistory(product);
                     }}
                   >
                     {product}
@@ -117,114 +196,141 @@ const ProductAnalysis = () => {
           )}
         </div>
 
-        {/* Product Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <Card className="shadow-sm">
-            <CardContent className="p-4">
-              <h3 className="font-semibold mb-2">Menor Preço</h3>
-              <div className="space-y-1">
-                <p className="text-2xl font-bold text-green-600">R$ 5,79</p>
-                <p className="text-sm text-muted-foreground">15/03/2024 - Mercado B</p>
-              </div>
-            </CardContent>
-          </Card>
+        {selectedProduct && (
+          <>
+            {/* Product Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <Card className="shadow-sm">
+                <CardContent className="p-4">
+                  <h3 className="font-semibold mb-2">Menor Preço</h3>
+                  <div className="space-y-1">
+                    {productStats.lowestPrice && (
+                      <>
+                        <p className="text-2xl font-bold text-green-600">
+                          {new Intl.NumberFormat('pt-BR', { 
+                            style: 'currency', 
+                            currency: 'BRL' 
+                          }).format(productStats.lowestPrice.price)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(productStats.lowestPrice.date).toLocaleDateString('pt-BR')} - {productStats.lowestPrice.market}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card className="shadow-sm">
-            <CardContent className="p-4">
-              <h3 className="font-semibold mb-2">Maior Preço</h3>
-              <div className="space-y-1">
-                <p className="text-2xl font-bold text-red-600">R$ 6,49</p>
-                <p className="text-sm text-muted-foreground">28/02/2024 - Mercado C</p>
-              </div>
-            </CardContent>
-          </Card>
+              <Card className="shadow-sm">
+                <CardContent className="p-4">
+                  <h3 className="font-semibold mb-2">Maior Preço</h3>
+                  <div className="space-y-1">
+                    {productStats.highestPrice && (
+                      <>
+                        <p className="text-2xl font-bold text-red-600">
+                          {new Intl.NumberFormat('pt-BR', { 
+                            style: 'currency', 
+                            currency: 'BRL' 
+                          }).format(productStats.highestPrice.price)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(productStats.highestPrice.date).toLocaleDateString('pt-BR')} - {productStats.highestPrice.market}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card className="shadow-sm">
-            <CardContent className="p-4">
-              <h3 className="font-semibold mb-2">Total Gasto</h3>
-              <div className="space-y-1">
-                <p className="text-2xl font-bold text-purple-600">R$ 32,45</p>
-                <p className="text-sm text-muted-foreground">6 unidades</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Price Variation Chart */}
-        <Card className="mb-6 shadow-sm">
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-4">Variação de Preço</h3>
-            <div className="h-64">
-              <ChartContainer config={{}}>
-                <LineChart data={priceHistory}>
-                  <XAxis dataKey="date" stroke="hsl(var(--primary))" />
-                  <YAxis stroke="hsl(var(--primary))" />
-                  <Line 
-                    type="monotone" 
-                    dataKey="price" 
-                    stroke="hsl(var(--primary))" 
-                    strokeWidth={2}
-                  />
-                  <ChartTooltip />
-                </LineChart>
-              </ChartContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Purchase History Table */}
-        <Card className="shadow-sm mb-6">
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-4">Histórico de Compras</h3>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Mercado</TableHead>
-                  <TableHead>Quantidade</TableHead>
-                  <TableHead>Preço</TableHead>
-                  <TableHead>Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {purchaseHistory.map((purchase, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{purchase.date}</TableCell>
-                    <TableCell>{purchase.market}</TableCell>
-                    <TableCell>{purchase.quantity}</TableCell>
-                    <TableCell>
+              <Card className="shadow-sm">
+                <CardContent className="p-4">
+                  <h3 className="font-semibold mb-2">Total Gasto</h3>
+                  <div className="space-y-1">
+                    <p className="text-2xl font-bold text-purple-600">
                       {new Intl.NumberFormat('pt-BR', { 
                         style: 'currency', 
                         currency: 'BRL' 
-                      }).format(purchase.price)}
-                    </TableCell>
-                    <TableCell>
-                      {new Intl.NumberFormat('pt-BR', { 
-                        style: 'currency', 
-                        currency: 'BRL' 
-                      }).format(purchase.price * purchase.quantity)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        {/* Product Category */}
-        <Card className="shadow-sm mb-20">
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-2">Categoria do Produto</h3>
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-sm">
-                Alimentos
-              </span>
-              <span className="px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-sm">
-                Básicos
-              </span>
+                      }).format(productStats.totalSpent)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {productStats.totalQuantity} unidades
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+
+            {/* Price Variation Chart */}
+            <Card className="mb-6 shadow-sm">
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-4">Variação de Preço</h3>
+                <div className="h-64">
+                  <ChartContainer config={{}}>
+                    <LineChart data={priceHistory}>
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="hsl(var(--primary))"
+                        tickFormatter={(date) => new Date(date).toLocaleDateString('pt-BR')}
+                      />
+                      <YAxis 
+                        stroke="hsl(var(--primary))"
+                        tickFormatter={(value) => `R$ ${value.toFixed(2)}`}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="price" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={2}
+                      />
+                      <ChartTooltip />
+                    </LineChart>
+                  </ChartContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Purchase History Table */}
+            <Card className="shadow-sm mb-20">
+              <CardContent className="p-4">
+                <h3 className="font-semibold mb-4">Histórico de Compras</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Mercado</TableHead>
+                      <TableHead>Quantidade</TableHead>
+                      <TableHead>Preço Unit.</TableHead>
+                      <TableHead>Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {purchaseHistory.map((purchase, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          {new Date(purchase.date).toLocaleDateString('pt-BR')}
+                        </TableCell>
+                        <TableCell>{purchase.market}</TableCell>
+                        <TableCell>{purchase.quantity}</TableCell>
+                        <TableCell>
+                          {new Intl.NumberFormat('pt-BR', { 
+                            style: 'currency', 
+                            currency: 'BRL' 
+                          }).format(purchase.price)}
+                        </TableCell>
+                        <TableCell>
+                          {new Intl.NumberFormat('pt-BR', { 
+                            style: 'currency', 
+                            currency: 'BRL' 
+                          }).format(purchase.total)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       <BottomNav />
