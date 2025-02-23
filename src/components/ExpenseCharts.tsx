@@ -1,69 +1,84 @@
+
 import { Card, CardContent } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts';
-
-const COLORS = ['#8B5CF6', '#D946EF', '#F97316', '#0EA5E9', '#10B981'];
-
-interface ExpenseData {
-  name: string;
-  value: number;
-}
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import { ChartWrapper } from "./ChartWrapper";
 
 interface ExpenseChartsProps {
-  monthlyData: ExpenseData[];
-  marketDistribution: ExpenseData[];
+  monthlyData: Array<{ name: string; value: number }>;
+  marketDistribution: Array<{ name: string; value: number }>;
 }
 
-export const ExpenseCharts = ({ monthlyData, marketDistribution }: ExpenseChartsProps) => {
-  return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <Card className="shadow-sm">
-        <CardContent className="p-4">
-          <div className="mb-4">
-            <h2 className="font-semibold text-lg text-foreground">Gastos Mensais</h2>
-            <p className="text-sm text-muted-foreground">Últimos 6 meses</p>
-          </div>
-          <div className="h-64">
-            <ChartContainer config={{}}>
-              <BarChart data={monthlyData}>
-                <XAxis dataKey="name" stroke="hsl(var(--primary))" />
-                <YAxis stroke="hsl(var(--primary))" />
-                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                <ChartTooltip />
-              </BarChart>
-            </ChartContainer>
-          </div>
-        </CardContent>
-      </Card>
+export function ExpenseCharts({ monthlyData, marketDistribution }: ExpenseChartsProps) {
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
-      <Card className="shadow-sm">
-        <CardContent className="p-4">
-          <div className="mb-4">
-            <h2 className="font-semibold text-lg text-foreground">Distribuição por Mercado</h2>
-            <p className="text-sm text-muted-foreground">Este mês</p>
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Gráfico de Linha - Gastos Mensais */}
+          <div className="h-[300px]">
+            <h3 className="font-semibold mb-4">Gastos Mensais</h3>
+            <ChartWrapper>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#8884d8"
+                    strokeWidth={2}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartWrapper>
           </div>
-          <div className="h-64">
-            <ChartContainer config={{}}>
-              <PieChart>
-                <Pie
-                  data={marketDistribution}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  label
-                >
-                  {marketDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <ChartTooltip />
-              </PieChart>
-            </ChartContainer>
+
+          {/* Gráfico de Pizza - Distribuição por Mercado */}
+          <div className="h-[300px]">
+            <h3 className="font-semibold mb-4">Distribuição por Mercado</h3>
+            <ChartWrapper>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={marketDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) =>
+                      `${name} ${(percent * 100).toFixed(0)}%`
+                    }
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {marketDistribution.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartWrapper>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
-};
+}
