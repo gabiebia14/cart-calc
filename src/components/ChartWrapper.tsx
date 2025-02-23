@@ -5,8 +5,37 @@ export const ChartWrapper: React.FC<{ children: React.ReactNode }> = ({ children
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Disconnect any existing ResizeObserver when the component unmounts
+    let rafId: number;
+    let resizeObserver: ResizeObserver | null = null;
+
+    if (wrapperRef.current) {
+      resizeObserver = new ResizeObserver((entries) => {
+        // Cancel any existing animation frame
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+        }
+
+        // Schedule a new update
+        rafId = requestAnimationFrame(() => {
+          if (!wrapperRef.current) return;
+          // Trigger a reflow
+          wrapperRef.current.style.display = 'none';
+          wrapperRef.current.offsetHeight; // Force reflow
+          wrapperRef.current.style.display = '';
+        });
+      });
+
+      resizeObserver.observe(wrapperRef.current);
+    }
+
+    // Cleanup function
     return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       if (wrapperRef.current) {
         const observers = (window as any).__resizeObservers__ || [];
         observers.forEach((observer: any) => {
