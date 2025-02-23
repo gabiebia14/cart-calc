@@ -1,4 +1,3 @@
-
 import { BottomNav } from "@/components/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
@@ -51,38 +50,37 @@ const ProductAnalysis = () => {
         items.forEach(item => {
           if (item.productName.toLowerCase() === productName.toLowerCase()) {
             const quantity = Number(item.quantity);
-            const total = Number(item.total);
-            const pricePerUnit = total / quantity; // Calcula o preço por unidade baseado no total
+            const total = Number(item.total); // Valor real gasto
             const date = new Date(receipt.data_compra).toISOString().split('T')[0];
 
-            // Adicionar ao histórico de preços (usando preço por unidade para o gráfico)
+            // Adicionar ao histórico de preços (usando o total real)
             history.push({
               date,
-              price: pricePerUnit
+              price: total // Usando o total real
             });
 
             // Adicionar ao histórico de compras
             purchases.push({
               date,
-              price: pricePerUnit,
+              price: total, // Preço total real
               market: receipt.mercado,
               quantity,
               total
             });
 
-            // Atualizar menor preço (agora usando o preço por unidade real)
-            if (pricePerUnit < lowestPrice.price) {
+            // Atualizar menor preço (usando o total real)
+            if (total < lowestPrice.price) {
               lowestPrice = {
-                price: pricePerUnit,
+                price: total,
                 date,
                 market: receipt.mercado
               };
             }
 
-            // Atualizar maior preço (agora usando o preço por unidade real)
-            if (pricePerUnit > highestPrice.price) {
+            // Atualizar maior preço (usando o total real)
+            if (total > highestPrice.price) {
               highestPrice = {
-                price: pricePerUnit,
+                price: total,
                 date,
                 market: receipt.mercado
               };
