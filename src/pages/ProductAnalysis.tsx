@@ -50,44 +50,45 @@ const ProductAnalysis = () => {
         const items = receipt.items as any[];
         items.forEach(item => {
           if (item.productName.toLowerCase() === productName.toLowerCase()) {
-            const price = Number(item.unitPrice);
             const quantity = Number(item.quantity);
             const total = Number(item.total);
+            const pricePerUnit = total / quantity; // Calcula o preço por unidade baseado no total
             const date = new Date(receipt.data_compra).toISOString().split('T')[0];
 
-            // Adicionar ao histórico de preços
+            // Adicionar ao histórico de preços (usando preço por unidade para o gráfico)
             history.push({
               date,
-              price
+              price: pricePerUnit
             });
 
             // Adicionar ao histórico de compras
             purchases.push({
               date,
-              price,
+              price: pricePerUnit,
               market: receipt.mercado,
               quantity,
               total
             });
 
-            // Atualizar menor preço
-            if (price < lowestPrice.price) {
+            // Atualizar menor preço (agora usando o preço por unidade real)
+            if (pricePerUnit < lowestPrice.price) {
               lowestPrice = {
-                price,
+                price: pricePerUnit,
                 date,
                 market: receipt.mercado
               };
             }
 
-            // Atualizar maior preço
-            if (price > highestPrice.price) {
+            // Atualizar maior preço (agora usando o preço por unidade real)
+            if (pricePerUnit > highestPrice.price) {
               highestPrice = {
-                price,
+                price: pricePerUnit,
                 date,
                 market: receipt.mercado
               };
             }
 
+            // Acumula o total gasto e quantidade
             totalSpent += total;
             totalQuantity += quantity;
           }
