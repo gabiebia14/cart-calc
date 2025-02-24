@@ -45,7 +45,18 @@ const Index = () => {
       if (error) throw error;
 
       if (receipts) {
-        setAllReceipts(receipts);
+        // Converter os dados para o formato correto antes de atribuir ao estado
+        const formattedReceipts: Receipt[] = receipts.map(receipt => ({
+          ...receipt,
+          items: (receipt.items as any[]).map(item => ({
+            productName: item.productName,
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unitPrice),
+            total: Number(item.total),
+            validFormat: Boolean(item.validFormat)
+          }))
+        }));
+        setAllReceipts(formattedReceipts);
       }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -73,16 +84,7 @@ const Index = () => {
     });
 
     // Extrair e processar itens dos recibos
-    const allItems = filteredReceipts.flatMap(receipt => {
-      const items = receipt.items as any[];
-      return items ? items.map(item => ({
-        productName: item.productName,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-        total: Number(item.total),
-        validFormat: item.validFormat
-      })) : [];
-    });
+    const allItems = filteredReceipts.flatMap(receipt => receipt.items);
 
     // Encontrar produto mais comprado
     const productCount: { [key: string]: number } = {};
@@ -211,3 +213,4 @@ const Index = () => {
 };
 
 export default Index;
+
