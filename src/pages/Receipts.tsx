@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ReceiptList } from "@/components/ReceiptList";
 import { ReceiptUploader } from "@/components/ReceiptUploader";
 import { ReceiptsHeader } from "@/components/ReceiptsHeader";
+import { MonthFilter } from "@/components/MonthFilter";
 import { useState, useEffect } from "react";
 import { Receipt } from "@/types/receipt";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,9 +13,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { fetchReceiptsList, deleteReceipt, uploadReceiptImage, processReceipt, saveReceipt } from "@/services/receiptService";
 import { validateReceiptData } from "@/utils/receiptUtils";
+import { format, parseISO } from "date-fns";
 
 const Receipts = () => {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [filteredReceipts, setFilteredReceipts] = useState<Receipt[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,11 +29,31 @@ const Receipts = () => {
     fetchReceipts();
   }, []);
 
+  useEffect(() => {
+    filterReceipts();
+  }, [selectedMonth, receipts]);
+
+  const filterReceipts = () => {
+    if (selectedMonth === "all") {
+      setFilteredReceipts(receipts);
+      return;
+    }
+
+    const filtered = receipts.filter((receipt) => {
+      const receiptDate = parseISO(receipt.data_compra);
+      const receiptMonth = format(receiptDate, "MM-yyyy");
+      return receiptMonth === selectedMonth;
+    });
+
+    setFilteredReceipts(filtered);
+  };
+
   const fetchReceipts = async () => {
     try {
       setError(null);
       const data = await fetchReceiptsList();
       setReceipts(data);
+      setFilteredReceipts(data);
     } catch (error: any) {
       console.error('Error fetching receipts:', error);
       setError('Não foi possível carregar os recibos. Tente novamente mais tarde.');
@@ -91,10 +115,8 @@ const Receipts = () => {
       const newReceipt = await saveReceipt(items, storeName, session.user.id, purchaseDate);
       setReceipts(prev => [newReceipt, ...prev]);
 
-      // Atualiza o toast para mostrar o progresso
       toast.success(`Recibo ${processedCount} de ${totalToProcess} processado com sucesso! ${items.length} itens encontrados.`);
 
-      // Se for o último arquivo, reseta os contadores
       if (processedCount >= totalToProcess) {
         setProcessedCount(0);
         setTotalToProcess(0);
@@ -130,16 +152,22 @@ const Receipts = () => {
 
         <Card className="shadow-sm mt-6">
           <CardContent className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h2 className="font-semibold text-lg text-foreground">Recibos Processados</h2>
-                <p className="text-sm text-muted-foreground">Últimos 30 dias</p>
+            <div className="flex flex-col gap-4 mb-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="font-semibold text-lg text-foreground">Recibos Processados</h2>
+                  <p className="text-sm text-muted-foreground">Filtrar por mês</p>
+                </div>
               </div>
+              <MonthFilter
+                selectedMonth={selectedMonth}
+                onMonthSelect={setSelectedMonth}
+              />
             </div>
             {isLoading ? (
               <div className="text-center py-4">Carregando...</div>
             ) : (
-              <ReceiptList receipts={receipts} onDelete={handleDelete} />
+              <ReceiptList receipts={filteredReceipts} onDelete={handleDelete} />
             )}
           </CardContent>
         </Card>
