@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
@@ -211,6 +212,9 @@ const ShoppingList = () => {
       });
     }
   };
+
+  // Calculate pending items
+  const pendingItems = items.filter(item => !item.completed).length;
 
   return (
     <div className="min-h-screen bg-background font-inter">
