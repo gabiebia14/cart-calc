@@ -8,6 +8,7 @@ import { LineChart, Line, XAxis, YAxis } from 'recharts';
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebounce } from "@/hooks/use-debounce";
+import { TopProductsList } from "@/components/TopProductsList";
 
 const ProductAnalysis = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,6 +16,7 @@ const ProductAnalysis = () => {
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [priceHistory, setPriceHistory] = useState<any[]>([]);
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
+  const [topProducts, setTopProducts] = useState<any[]>([]);
   const [productStats, setProductStats] = useState<{
     lowestPrice: { price: number; date: string; market: string } | null;
     highestPrice: { price: number; date: string; market: string } | null;
@@ -28,6 +30,47 @@ const ProductAnalysis = () => {
   });
   
   const debouncedSearch = useDebounce(searchTerm, 300);
+
+  const fetchTopProducts = async () => {
+    try {
+      const { data: receipts, error } = await supabase
+        .from('receipts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const productMap = new Map<string, { quantity: number; total: number }>();
+
+      receipts?.forEach(receipt => {
+        const items = receipt.items as any[];
+        items.forEach(item => {
+          const currentProduct = productMap.get(item.productName) || { quantity: 0, total: 0 };
+          productMap.set(item.productName, {
+            quantity: currentProduct.quantity + Number(item.quantity),
+            total: currentProduct.total + Number(item.total)
+          });
+        });
+      });
+
+      const sortedProducts = Array.from(productMap.entries())
+        .map(([name, stats]) => ({
+          name,
+          quantity: stats.quantity,
+          total: stats.total
+        }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
+
+      setTopProducts(sortedProducts);
+    } catch (error) {
+      console.error('Error fetching top products:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchTopProducts();
+  }, []);
 
   const fetchProductHistory = async (productName: string) => {
     try {
@@ -195,7 +238,7 @@ const ProductAnalysis = () => {
           )}
         </div>
 
-        {selectedProduct && (
+        {selectedProduct ? (
           <>
             {/* Product Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -329,6 +372,10 @@ const ProductAnalysis = () => {
               </CardContent>
             </Card>
           </>
+        ) : (
+          <div className="mb-20">
+            <TopProductsList products={topProducts} />
+          </div>
         )}
       </div>
 
