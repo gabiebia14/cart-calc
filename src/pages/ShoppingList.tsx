@@ -50,12 +50,23 @@ const ShoppingList = () => {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          variant: "destructive",
+          description: "Usuário não autenticado"
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('shopping_list_items')
         .insert({
           name: newItemName.trim(),
           quantity: newItemQuantity.trim() || "1",
-          completed: false
+          completed: false,
+          user_id: user.id
         });
 
       if (error) throw error;
@@ -120,17 +131,26 @@ const ShoppingList = () => {
     }
   };
 
-  const pendingItems = items.filter(item => !item.completed).length;
-
   const handleAddSelectedProducts = async (products: { name: string; quantity: string }[]) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          variant: "destructive",
+          description: "Usuário não autenticado"
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('shopping_list_items')
         .insert(
           products.map(product => ({
             name: product.name,
             quantity: product.quantity,
-            completed: false
+            completed: false,
+            user_id: user.id
           }))
         );
 
