@@ -1,18 +1,14 @@
-
 import { useState, useEffect } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Check, Trash2 } from "lucide-react";
+import { Plus, Check, Trash2, Share2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { ProductSelector } from "@/components/ProductSelector";
+import type { Database } from "@/integrations/supabase/types";
 
-interface ShoppingListItem {
-  id: string;
-  name: string;
-  quantity: string;
-  completed: boolean;
-}
+type ShoppingListItem = Database['public']['Tables']['shopping_list_items']['Row'];
 
 const ShoppingList = () => {
   const [items, setItems] = useState<ShoppingListItem[]>([]);
@@ -20,7 +16,6 @@ const ShoppingList = () => {
   const [newItemQuantity, setNewItemQuantity] = useState("");
   const { toast } = useToast();
 
-  // Buscar itens da lista
   const fetchItems = async () => {
     try {
       const { data, error } = await supabase
@@ -41,12 +36,10 @@ const ShoppingList = () => {
     }
   };
 
-  // Carregar itens ao iniciar
   useEffect(() => {
     fetchItems();
   }, []);
 
-  // Adicionar novo item
   const addItem = async () => {
     if (!newItemName.trim()) {
       toast({
@@ -84,7 +77,6 @@ const ShoppingList = () => {
     }
   };
 
-  // Atualizar status do item
   const toggleItemStatus = async (id: string, completed: boolean) => {
     try {
       const { error } = await supabase
@@ -105,7 +97,6 @@ const ShoppingList = () => {
     }
   };
 
-  // Remover item
   const removeItem = async (id: string) => {
     try {
       const { error } = await supabase
@@ -131,10 +122,79 @@ const ShoppingList = () => {
 
   const pendingItems = items.filter(item => !item.completed).length;
 
+  const handleAddSelectedProducts = async (products: { name: string; quantity: string }[]) => {
+    try {
+      const { error } = await supabase
+        .from('shopping_list_items')
+        .insert(
+          products.map(product => ({
+            name: product.name,
+            quantity: product.quantity,
+            completed: false
+          }))
+        );
+
+      if (error) throw error;
+
+      fetchItems();
+      toast({
+        description: `${products.length} itens adicionados com sucesso!`
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar itens:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao adicionar itens",
+        description: "Não foi possível adicionar os itens à lista."
+      });
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const pendingItemsText = items
+        .filter(item => !item.completed)
+        .map(item => `${item.quantity}x ${item.name}`)
+        .join('\n');
+
+      const completedItemsText = items
+        .filter(item => item.completed)
+        .map(item => `${item.quantity}x ${item.name}`)
+        .join('\n');
+
+      let shareText = '📝 Lista de Compras:\n\n';
+      
+      if (pendingItemsText) {
+        shareText += '📍 Pendentes:\n' + pendingItemsText + '\n\n';
+      }
+      
+      if (completedItemsText) {
+        shareText += '✅ Comprados:\n' + completedItemsText;
+      }
+
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Lista de Compras',
+          text: shareText
+        });
+      } else {
+        await navigator.clipboard.writeText(shareText);
+        toast({
+          description: "Lista copiada para a área de transferência!"
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao compartilhar:', error);
+      toast({
+        variant: "destructive",
+        description: "Não foi possível compartilhar a lista."
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background font-inter">
       <div className="max-w-md mx-auto p-4">
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
@@ -146,7 +206,6 @@ const ShoppingList = () => {
           </div>
         </div>
 
-        {/* Add Item */}
         <Card className="mb-6 shadow-sm">
           <CardContent className="p-4">
             <div className="flex flex-col gap-2">
@@ -182,7 +241,8 @@ const ShoppingList = () => {
           </CardContent>
         </Card>
 
-        {/* Shopping List */}
+        <ProductSelector onAdd={handleAddSelectedProducts} />
+
         <Card className="shadow-sm mb-20">
           <CardContent className="p-4">
             <div className="flex justify-between items-center mb-4">
@@ -190,6 +250,14 @@ const ShoppingList = () => {
                 <h2 className="font-semibold text-lg text-foreground">Itens da Lista</h2>
                 <p className="text-sm text-muted-foreground">{pendingItems} itens pendentes</p>
               </div>
+              {items.length > 0 && (
+                <button
+                  onClick={handleShare}
+                  className="text-primary hover:opacity-70 transition-opacity"
+                >
+                  <Share2 className="w-5 h-5" />
+                </button>
+              )}
             </div>
             <div className="space-y-3">
               {items.map((item) => (
