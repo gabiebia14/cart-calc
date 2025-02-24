@@ -17,6 +17,7 @@ interface EditReceiptModalProps {
 export const EditReceiptModal = ({ receipt, isOpen, onClose, onUpdate }: EditReceiptModalProps) => {
   const [items, setItems] = useState(receipt.items || []);
   const [mercado, setMercado] = useState(receipt.mercado);
+  const [dataCompra, setDataCompra] = useState(receipt.data_compra?.split('T')[0] || new Date().toISOString().split('T')[0]);
 
   const handleItemChange = (index: number, field: string, value: string | number) => {
     const newItems = [...items];
@@ -52,13 +53,18 @@ export const EditReceiptModal = ({ receipt, isOpen, onClose, onUpdate }: EditRec
       const updatedReceipt = {
         ...receipt,
         mercado,
+        data_compra: dataCompra,
         items,
         total
       };
 
       const { error } = await supabase
         .from('receipts')
-        .update({ ...updatedReceipt, items: JSON.parse(JSON.stringify(items)) })
+        .update({ 
+          ...updatedReceipt, 
+          items: JSON.parse(JSON.stringify(items)),
+          data_compra: dataCompra
+        })
         .eq('id', receipt.id);
 
       if (error) throw error;
@@ -80,14 +86,25 @@ export const EditReceiptModal = ({ receipt, isOpen, onClose, onUpdate }: EditRec
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Nome do Estabelecimento</label>
-            <Input
-              value={mercado}
-              onChange={(e) => setMercado(e.target.value)}
-              placeholder="Nome do estabelecimento"
-              className="w-full"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nome do Estabelecimento</label>
+              <Input
+                value={mercado}
+                onChange={(e) => setMercado(e.target.value)}
+                placeholder="Nome do estabelecimento"
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data da Compra</label>
+              <Input
+                type="date"
+                value={dataCompra}
+                onChange={(e) => setDataCompra(e.target.value)}
+                className="w-full"
+              />
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -139,3 +156,4 @@ export const EditReceiptModal = ({ receipt, isOpen, onClose, onUpdate }: EditRec
     </Dialog>
   );
 };
+

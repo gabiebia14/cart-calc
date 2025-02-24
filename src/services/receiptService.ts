@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Receipt, ReceiptItem } from "@/types/receipt";
 import { validateReceiptData } from "@/utils/receiptUtils";
@@ -68,7 +69,7 @@ export const processReceipt = async (file: File) => {
   return cleanedResult;
 };
 
-export const saveReceipt = async (items: any[], storeName: string, userId: string) => {
+export const saveReceipt = async (items: any[], storeName: string, userId: string, purchaseDate?: string) => {
   // Calculate total based on corrected item totals
   const total = items.reduce((acc: number, item: any) => {
     return acc + Number(item.total);
@@ -84,7 +85,7 @@ export const saveReceipt = async (items: any[], storeName: string, userId: strin
   })) as Json;
 
   const supabaseReceipt = {
-    data_compra: new Date().toISOString(),
+    data_compra: purchaseDate || new Date().toISOString().split('T')[0],
     mercado: storeName,
     total: total,
     items: jsonItems,
@@ -114,3 +115,4 @@ export const saveReceipt = async (items: any[], storeName: string, userId: strin
 
   throw new Error('Erro ao salvar recibo');
 };
+

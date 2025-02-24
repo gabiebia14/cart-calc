@@ -87,8 +87,13 @@ export const validateReceiptData = (data: any) => {
     throw new Error('Nenhum item válido encontrado no recibo');
   }
 
+  // Extrair a data da compra, se disponível, ou usar a data atual
+  const purchaseDate = data.purchase_date || new Date().toISOString().split('T')[0];
+
   return {
     items: validItems,
-    storeName: data.store_info.name || 'Estabelecimento não identificado'
+    storeName: data.store_info.name || 'Estabelecimento não identificado',
+    purchaseDate
   };
 };
+
