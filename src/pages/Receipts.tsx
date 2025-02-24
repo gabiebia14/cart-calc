@@ -72,21 +72,20 @@ const Receipts = () => {
 
       await uploadReceiptImage(file);
       
-      toast.loading('Processando recibo...');
       const receiptData = await processReceipt(file);
       
       let parsedData;
       try {
         parsedData = JSON.parse(receiptData);
-        console.log('Parsed receipt data:', parsedData); // Debug log
+        console.log('Parsed receipt data:', parsedData);
       } catch (e) {
         console.error('Error parsing receipt data:', e);
         throw new Error('Erro ao processar dados do recibo');
       }
 
-      const { items, storeName } = validateReceiptData(parsedData);
+      const { items, storeName, purchaseDate } = validateReceiptData(parsedData);
       
-      const newReceipt = await saveReceipt(items, storeName, session.user.id);
+      const newReceipt = await saveReceipt(items, storeName, session.user.id, purchaseDate);
       setReceipts([newReceipt, ...receipts]);
       toast.success(`Recibo processado com sucesso! ${items.length} itens encontrados.`);
     } catch (error: any) {

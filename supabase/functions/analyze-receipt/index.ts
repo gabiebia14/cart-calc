@@ -46,7 +46,7 @@ serve(async (req) => {
     const model = genAI.getGenerativeModel({ 
       model: "gemini-1.5-flash",
       generationConfig: {
-        temperature: 0.1, // Reduzido para maior precisão
+        temperature: 0.1,
         topP: 0.1,
         topK: 16,
         maxOutputTokens: 8192,
@@ -77,10 +77,12 @@ Retorne SOMENTE um JSON com a estrutura:
       "total": number,
       "validFormat": boolean
     }
-  ]
+  ],
+  "purchase_date": "YYYY-MM-DD"
 }
 
 IMPORTANTE:
+- Extraia a data da compra exatamente como mostrada no recibo. Deve estar no formato YYYY-MM-DD.
 - Mantenha os valores EXATAMENTE como aparecem no recibo
 - Não faça cálculos ou correções nos valores
 - Use ponto como separador decimal
