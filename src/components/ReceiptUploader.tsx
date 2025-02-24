@@ -5,15 +5,17 @@ import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 
 interface ReceiptUploaderProps {
-  onUpload: (file: File) => void;
+  onUpload: (file: File) => Promise<void>;
   isProcessing?: boolean;
 }
 
 export const ReceiptUploader = ({ onUpload, isProcessing = false }: ReceiptUploaderProps) => {
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
-      const file = acceptedFiles[0];
-      onUpload(file);
+      // Processa cada arquivo sequencialmente
+      for (const file of acceptedFiles) {
+        await onUpload(file);
+      }
     }
   }, [onUpload]);
 
@@ -22,7 +24,7 @@ export const ReceiptUploader = ({ onUpload, isProcessing = false }: ReceiptUploa
     accept: {
       'image/*': ['.jpeg', '.jpg', '.png']
     },
-    maxFiles: 1,
+    multiple: true, // Habilita upload múltiplo
     disabled: isProcessing,
   });
 
@@ -44,14 +46,14 @@ export const ReceiptUploader = ({ onUpload, isProcessing = false }: ReceiptUploa
               {isProcessing
                 ? "Processando recibo..."
                 : isDragActive
-                ? "Solte o arquivo aqui..."
+                ? "Solte os arquivos aqui..."
                 : "Arraste e solte seus recibos aqui ou clique para selecionar"}
             </p>
             <button 
               className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
               disabled={isProcessing}
             >
-              {isProcessing ? "Processando..." : "Selecionar Arquivo"}
+              {isProcessing ? "Processando..." : "Selecionar Arquivos"}
             </button>
           </div>
         </div>

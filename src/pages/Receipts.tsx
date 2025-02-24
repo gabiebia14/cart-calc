@@ -18,6 +18,8 @@ const Receipts = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [processedCount, setProcessedCount] = useState(0);
+  const [totalToProcess, setTotalToProcess] = useState(0);
 
   useEffect(() => {
     fetchReceipts();
@@ -56,6 +58,7 @@ const Receipts = () => {
     try {
       setError(null);
       setIsProcessing(true);
+      setProcessedCount(prev => prev + 1);
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -86,15 +89,26 @@ const Receipts = () => {
       const { items, storeName, purchaseDate } = validateReceiptData(parsedData);
       
       const newReceipt = await saveReceipt(items, storeName, session.user.id, purchaseDate);
-      setReceipts([newReceipt, ...receipts]);
-      toast.success(`Recibo processado com sucesso! ${items.length} itens encontrados.`);
+      setReceipts(prev => [newReceipt, ...prev]);
+
+      // Atualiza o toast para mostrar o progresso
+      toast.success(`Recibo ${processedCount} de ${totalToProcess} processado com sucesso! ${items.length} itens encontrados.`);
+
+      // Se for o último arquivo, reseta os contadores
+      if (processedCount >= totalToProcess) {
+        setProcessedCount(0);
+        setTotalToProcess(0);
+        setIsProcessing(false);
+      }
+
     } catch (error: any) {
       console.error('Error uploading receipt:', error);
       setError(error.message || 'Erro ao processar recibo');
       toast.error(error.message || 'Erro ao enviar recibo');
       await fetchReceipts();
-    } finally {
       setIsProcessing(false);
+      setProcessedCount(0);
+      setTotalToProcess(0);
     }
   };
 
