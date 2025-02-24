@@ -42,7 +42,7 @@ export const ReceiptUploader = ({ onUpload, isProcessing = false }: ReceiptUploa
             <h3 className="text-lg font-semibold mb-2">Upload de Recibos</h3>
             <p className="text-sm text-muted-foreground mb-4">
               {isProcessing
-                ? "Processando..."
+                ? "Processando recibo..."
                 : isDragActive
                 ? "Solte o arquivo aqui..."
                 : "Arraste e solte seus recibos aqui ou clique para selecionar"}

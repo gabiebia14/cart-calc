@@ -86,50 +86,48 @@ export const EditReceiptModal = ({ receipt, isOpen, onClose, onUpdate }: EditRec
               value={mercado}
               onChange={(e) => setMercado(e.target.value)}
               placeholder="Nome do estabelecimento"
+              className="w-full"
             />
           </div>
 
           <div className="space-y-4">
             <h3 className="font-medium">Itens</h3>
+            <div className="grid grid-cols-[2fr,1fr,1fr,1fr] gap-2 items-center text-sm text-muted-foreground mb-2">
+              <div>Produto</div>
+              <div>Quantidade</div>
+              <div>Preço Unit.</div>
+              <div>Total</div>
+            </div>
             {items.map((item: any, index: number) => (
-              <div key={index} className="grid grid-cols-5 gap-2 p-2 bg-gray-50 rounded-lg">
-                <div className="col-span-2">
-                  <label className="text-xs text-gray-500">Produto</label>
-                  <Input
-                    value={item.productName}
-                    onChange={(e) => handleItemChange(index, 'productName', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">Quantidade</label>
-                  <Input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">Preço Unit.</label>
-                  <Input
-                    type="number"
-                    value={item.unitPrice}
-                    onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">Total</label>
-                  <Input
-                    type="number"
-                    value={item.total}
-                    onChange={(e) => handleItemChange(index, 'total', e.target.value)}
-                  />
-                </div>
+              <div key={index} className="grid grid-cols-[2fr,1fr,1fr,1fr] gap-2 items-center bg-secondary/20 p-2 rounded-lg">
+                <Input
+                  value={item.productName}
+                  onChange={(e) => handleItemChange(index, 'productName', e.target.value)}
+                />
+                <Input
+                  type="number"
+                  value={item.quantity}
+                  onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                  step="0.01"
+                />
+                <Input
+                  type="number"
+                  value={item.unitPrice}
+                  onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
+                  step="0.01"
+                />
+                <Input
+                  type="number"
+                  value={item.total}
+                  onChange={(e) => handleItemChange(index, 'total', e.target.value)}
+                  step="0.01"
+                />
               </div>
             ))}
           </div>
         </div>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 mt-4">
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
