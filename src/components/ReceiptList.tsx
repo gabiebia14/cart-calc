@@ -1,7 +1,7 @@
 
 import { Receipt } from "@/types/receipt";
 import { Edit, Trash2 } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 import { EditReceiptModal } from "./EditReceiptModal";
@@ -19,6 +19,12 @@ export const ReceiptList = ({ receipts, onDelete }: ReceiptListProps) => {
     setEditingReceipt(null);
   };
 
+  const formatDate = (dateString: string) => {
+    // Garantir que a data seja tratada como UTC para evitar problemas de fuso horário
+    const date = parseISO(dateString);
+    return format(date, "'Compra em' dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
+
   return (
     <div className="space-y-3">
       {receipts.map((receipt) => (
@@ -30,7 +36,7 @@ export const ReceiptList = ({ receipts, onDelete }: ReceiptListProps) => {
             <h3 className="font-medium text-gray-800">{receipt.mercado}</h3>
             <div className="flex flex-col">
               <p className="text-sm text-gray-500">
-                {format(new Date(receipt.data_compra), "'Compra em' dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                {formatDate(receipt.data_compra)}
               </p>
               <p className="text-sm text-gray-500">
                 {receipt.items?.length || 0} itens
