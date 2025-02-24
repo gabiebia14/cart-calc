@@ -24,13 +24,16 @@ export const ReceiptList = ({ receipts, onDelete }: ReceiptListProps) => {
       {receipts.map((receipt) => (
         <div 
           key={receipt.id} 
-          className="bg-white rounded-xl shadow-sm p-4 flex justify-between items-center border border-gray-100"
+          className="bg-white rounded-xl shadow-sm p-4 flex justify-between items-start border border-gray-100"
         >
-          <div className="flex items-center gap-4">
-            <div>
-              <h3 className="font-medium text-gray-800">{receipt.mercado}</h3>
+          <div className="flex flex-col gap-1">
+            <h3 className="font-medium text-gray-800">{receipt.mercado}</h3>
+            <div className="flex flex-col">
               <p className="text-sm text-gray-500">
-                {format(new Date(receipt.data_compra), "dd 'de' MMMM", { locale: ptBR })} • {receipt.items?.length || 0} itens
+                {format(new Date(receipt.data_compra), "'Compra em' dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+              </p>
+              <p className="text-sm text-gray-500">
+                {receipt.items?.length || 0} itens
               </p>
             </div>
           </div>
