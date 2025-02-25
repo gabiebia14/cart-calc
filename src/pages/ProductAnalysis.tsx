@@ -1,3 +1,4 @@
+
 import { BottomNav } from "@/components/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
@@ -9,9 +10,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebounce } from "@/hooks/use-debounce";
 import { TopProductsList } from "@/components/TopProductsList";
+import { MonthFilter } from "@/components/MonthFilter";
+import { format, parseISO } from "date-fns";
 
 const ProductAnalysis = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('all');
   const [products, setProducts] = useState<string[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [priceHistory, setPriceHistory] = useState<any[]>([]);
@@ -31,6 +35,15 @@ const ProductAnalysis = () => {
   
   const debouncedSearch = useDebounce(searchTerm, 300);
 
+  const filterByMonth = (data: any[], dateField: string) => {
+    if (selectedMonth === 'all') return data;
+    return data.filter(item => {
+      const itemDate = parseISO(item[dateField]);
+      const itemMonth = format(itemDate, "MM-yyyy");
+      return itemMonth === selectedMonth;
+    });
+  };
+
   const fetchTopProducts = async () => {
     try {
       const { data: receipts, error } = await supabase
@@ -40,9 +53,12 @@ const ProductAnalysis = () => {
 
       if (error) throw error;
 
+      // Filtrar recibos pelo mês selecionado
+      const filteredReceipts = filterByMonth(receipts, 'data_compra');
+
       const productMap = new Map<string, { quantity: number; total: number }>();
 
-      receipts?.forEach(receipt => {
+      filteredReceipts?.forEach(receipt => {
         const items = receipt.items as any[];
         items.forEach(item => {
           const currentProduct = productMap.get(item.productName) || { quantity: 0, total: 0 };
@@ -70,7 +86,7 @@ const ProductAnalysis = () => {
 
   useEffect(() => {
     fetchTopProducts();
-  }, []);
+  }, [selectedMonth]);
 
   const fetchProductHistory = async (productName: string) => {
     try {
@@ -81,6 +97,9 @@ const ProductAnalysis = () => {
 
       if (error) throw error;
 
+      // Filtrar recibos pelo mês selecionado se necessário
+      const filteredReceipts = filterByMonth(receipts, 'data_compra');
+
       const history: any[] = [];
       const purchases: any[] = [];
       let lowestPrice = { price: Infinity, date: '', market: '' };
@@ -88,30 +107,27 @@ const ProductAnalysis = () => {
       let totalSpent = 0;
       let totalQuantity = 0;
 
-      receipts?.forEach(receipt => {
+      filteredReceipts?.forEach(receipt => {
         const items = receipt.items as any[];
         items.forEach(item => {
           if (item.productName.toLowerCase() === productName.toLowerCase()) {
             const quantity = Number(item.quantity);
-            const total = Number(item.total); // Valor real gasto
+            const total = Number(item.total);
             const date = new Date(receipt.data_compra).toISOString().split('T')[0];
 
-            // Adicionar ao histórico de preços (usando o total real)
             history.push({
               date,
-              price: total // Usando o total real
+              price: total
             });
 
-            // Adicionar ao histórico de compras
             purchases.push({
               date,
-              price: total, // Preço total real
+              price: total,
               market: receipt.mercado,
               quantity,
               total
             });
 
-            // Atualizar menor preço (usando o total real)
             if (total < lowestPrice.price) {
               lowestPrice = {
                 price: total,
@@ -120,7 +136,6 @@ const ProductAnalysis = () => {
               };
             }
 
-            // Atualizar maior preço (usando o total real)
             if (total > highestPrice.price) {
               highestPrice = {
                 price: total,
@@ -129,7 +144,6 @@ const ProductAnalysis = () => {
               };
             }
 
-            // Acumula o total gasto e quantidade
             totalSpent += total;
             totalQuantity += quantity;
           }
@@ -149,6 +163,12 @@ const ProductAnalysis = () => {
       console.error('Error fetching product history:', error);
     }
   };
+
+  useEffect(() => {
+    if (selectedProduct) {
+      fetchProductHistory(selectedProduct);
+    }
+  }, [selectedProduct, selectedMonth]);
 
   useEffect(() => {
     const searchProducts = async () => {
@@ -204,17 +224,21 @@ const ProductAnalysis = () => {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative">
+        {/* Search and Filter */}
+        <div className="mb-6 flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
             <Input 
               placeholder="Buscar produtos..."
-              className="w-full pl-10"
+              className="pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
           </div>
+          <MonthFilter
+            selectedMonth={selectedMonth}
+            onMonthSelect={setSelectedMonth}
+          />
           
           {/* Search Results */}
           {products.length > 0 && searchTerm.length >= 3 && !selectedProduct && (
