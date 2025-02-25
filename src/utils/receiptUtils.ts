@@ -20,77 +20,82 @@ export const validateReceiptData = (data: any) => {
     throw new Error('Formato de dados inválido');
   }
 
-  // Validar e normalizar os itens mantendo os valores originais
+  // Validar e normalizar os itens seguindo a lógica do Gemini
   const validItems = data.items.map(item => {
     try {
-      // Converter strings para números se necessário e remover símbolos monetários
-      const quantity = Number(String(item.quantity).replace(/[^\d.-]/g, ''));
-      const total = Number(String(item.total).replace(/[^\d.-]/g, ''));
+      // Converter strings para números e remover símbolos monetários
+      const productName = item.productName?.trim() || '';
+      const quantity = Number(String(item.quantity || '').replace(/[^\d.-]/g, ''));
+      const total = Number(String(item.total || '').replace(/[^\d.-]/g, ''));
       let unitPrice = item.unitPrice ? Number(String(item.unitPrice).replace(/[^\d.-]/g, '')) : null;
 
-      // Verificar se temos o mínimo necessário: nome do produto e total
-      if (isNaN(total) || !item.productName) {
-        console.error('Missing essential values:', item);
+      // Validar dados mínimos necessários
+      if (!productName || isNaN(quantity) || isNaN(total) || quantity <= 0) {
+        console.error('Invalid essential data:', item);
         return {
-          productName: item.productName || '',
-          quantity: quantity || 1,
+          productName,
+          quantity: 0,
           unitPrice: 0,
-          total: total || 0,
+          total: 0,
           validFormat: false
         };
       }
 
-      // Se não tiver quantidade, assume 1
-      if (isNaN(quantity) || quantity === 0) {
-        console.log('Invalid quantity, assuming 1:', item.productName);
+      // Caso 1: 4 colunas (nome, quantidade, preço unitário, total)
+      if (unitPrice !== null) {
+        const calculatedTotal = quantity * unitPrice;
+        const isValid = Math.abs(calculatedTotal - total) < 0.01; // Tolerância para arredondamento
+
+        if (!isValid) {
+          console.log('Invalid calculation for 4 columns:', {
+            product: productName,
+            quantity,
+            unitPrice,
+            calculatedTotal,
+            actualTotal: total
+          });
+        }
+
         return {
-          productName: item.productName,
-          quantity: 1,
-          unitPrice: total, // Preço unitário será igual ao total
-          total: total,
-          validFormat: true
+          productName,
+          quantity,
+          unitPrice,
+          total,
+          validFormat: isValid
         };
       }
 
-      // Verificar se o preço unitário precisa ser calculado
-      if (!unitPrice || unitPrice === total) {
-        // Se o preço unitário não foi fornecido ou é igual ao total,
-        // calculamos dividindo o total pela quantidade
-        unitPrice = total / quantity;
-        console.log('Calculated unit price:', {
-          product: item.productName,
-          unitPrice,
+      // Caso 2: 3 colunas (nome, quantidade, total)
+      const calculatedUnitPrice = total / quantity;
+      
+      if (isNaN(calculatedUnitPrice)) {
+        console.log('Invalid unit price calculation:', {
+          product: productName,
           quantity,
           total
         });
-      }
-
-      // Validar se o preço total está correto
-      const calculatedTotal = unitPrice * quantity;
-      const isValidTotal = Math.abs(calculatedTotal - total) < 0.01; // Tolerância para arredondamento
-
-      if (!isValidTotal) {
-        console.log('Total price mismatch:', {
-          product: item.productName,
-          calculatedTotal,
-          actualTotal: total,
+        return {
+          productName,
           quantity,
-          unitPrice
-        });
+          unitPrice: 0,
+          total,
+          validFormat: false
+        };
       }
 
       return {
-        productName: item.productName,
-        quantity: quantity,
-        unitPrice: unitPrice,
-        total: total,
-        validFormat: isValidTotal
+        productName,
+        quantity,
+        unitPrice: calculatedUnitPrice,
+        total,
+        validFormat: true
       };
+
     } catch (error) {
       console.error('Error processing item:', error, item);
       return {
         productName: item.productName || '',
-        quantity: 1,
+        quantity: 0,
         unitPrice: 0,
         total: 0,
         validFormat: false
@@ -102,7 +107,6 @@ export const validateReceiptData = (data: any) => {
     throw new Error('Nenhum item válido encontrado no recibo');
   }
 
-  // Extrair a data da compra, se disponível, ou usar a data atual
   const purchaseDate = data.purchase_date || new Date().toISOString().split('T')[0];
 
   return {
