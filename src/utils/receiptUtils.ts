@@ -43,6 +43,18 @@ export const validateReceiptData = (data: any) => {
 
       // Caso 1: 4 colunas (nome, quantidade, preço unitário, total)
       if (unitPrice !== null) {
+        // Se o preço unitário for igual ao total, provavelmente é um erro
+        // Neste caso, devemos calcular o preço unitário dividindo o total pela quantidade
+        if (Math.abs(unitPrice - total) < 0.01) {
+          console.log('Unit price equals total, recalculating:', {
+            product: productName,
+            quantity,
+            originalUnitPrice: unitPrice,
+            total
+          });
+          unitPrice = total / quantity;
+        }
+
         const calculatedTotal = quantity * unitPrice;
         const isValid = Math.abs(calculatedTotal - total) < 0.01; // Tolerância para arredondamento
 
