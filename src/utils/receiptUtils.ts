@@ -29,9 +29,23 @@ export const validateReceiptData = (data: any) => {
       const total = Number(String(item.total || '').replace(/[^\d.-]/g, ''));
       let unitPrice = item.unitPrice ? Number(String(item.unitPrice).replace(/[^\d.-]/g, '')) : null;
 
+      console.log('Processing item:', {
+        productName,
+        quantity,
+        unitPrice,
+        total,
+        hasUnitPrice: unitPrice !== null
+      });
+
       // Validar dados mínimos necessários
       if (!productName || isNaN(quantity) || isNaN(total) || quantity <= 0) {
-        console.error('Invalid essential data:', item);
+        console.error('Invalid essential data:', {
+          productName,
+          quantity,
+          total,
+          isQuantityValid: !isNaN(quantity) && quantity > 0,
+          isTotalValid: !isNaN(total)
+        });
         return {
           productName,
           quantity: 0,
@@ -43,30 +57,29 @@ export const validateReceiptData = (data: any) => {
 
       // Caso 1: 4 colunas (nome, quantidade, preço unitário, total)
       if (unitPrice !== null) {
-        // Se o preço unitário for igual ao total, provavelmente é um erro
-        // Neste caso, devemos calcular o preço unitário dividindo o total pela quantidade
-        if (Math.abs(unitPrice - total) < 0.01) {
-          console.log('Unit price equals total, recalculating:', {
+        // Se o preço unitário não foi detectado ou é igual ao total,
+        // calculamos dividindo o total pela quantidade
+        if (unitPrice <= 0 || Math.abs(unitPrice - total) < 0.01) {
+          unitPrice = total / quantity;
+          console.log('Recalculated unit price:', {
             product: productName,
             quantity,
-            originalUnitPrice: unitPrice,
+            newUnitPrice: unitPrice,
             total
           });
-          unitPrice = total / quantity;
         }
 
         const calculatedTotal = quantity * unitPrice;
-        const isValid = Math.abs(calculatedTotal - total) < 0.01; // Tolerância para arredondamento
+        const isValid = Math.abs(calculatedTotal - total) < 0.01;
 
-        if (!isValid) {
-          console.log('Invalid calculation for 4 columns:', {
-            product: productName,
-            quantity,
-            unitPrice,
-            calculatedTotal,
-            actualTotal: total
-          });
-        }
+        console.log('Validation result for 4 columns:', {
+          product: productName,
+          quantity,
+          unitPrice,
+          calculatedTotal,
+          actualTotal: total,
+          isValid
+        });
 
         return {
           productName,
@@ -80,11 +93,12 @@ export const validateReceiptData = (data: any) => {
       // Caso 2: 3 colunas (nome, quantidade, total)
       const calculatedUnitPrice = total / quantity;
       
-      if (isNaN(calculatedUnitPrice)) {
+      if (isNaN(calculatedUnitPrice) || calculatedUnitPrice <= 0) {
         console.log('Invalid unit price calculation:', {
           product: productName,
           quantity,
-          total
+          total,
+          calculatedUnitPrice
         });
         return {
           productName,
@@ -94,6 +108,13 @@ export const validateReceiptData = (data: any) => {
           validFormat: false
         };
       }
+
+      console.log('Validation result for 3 columns:', {
+        product: productName,
+        quantity,
+        unitPrice: calculatedUnitPrice,
+        total
+      });
 
       return {
         productName,
