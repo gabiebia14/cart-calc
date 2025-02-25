@@ -33,27 +33,29 @@ export const validateReceiptData = (data: any) => {
         console.error('Missing essential values:', item);
         return {
           productName: item.productName || '',
-          quantity: quantity || 1, // Se não houver quantidade, assume 1
-          unitPrice: unitPrice || total, // Se não houver preço unitário, usa o total
-          total: total,
+          quantity: quantity || 1,
+          unitPrice: 0,
+          total: total || 0,
           validFormat: false
         };
       }
 
       // Se não tiver quantidade, assume 1
-      if (isNaN(quantity)) {
-        console.log('Quantity not provided, assuming 1:', item.productName);
+      if (isNaN(quantity) || quantity === 0) {
+        console.log('Invalid quantity, assuming 1:', item.productName);
         return {
           productName: item.productName,
           quantity: 1,
           unitPrice: total, // Preço unitário será igual ao total
           total: total,
-          validFormat: true // Válido pois temos o essencial: nome e total
+          validFormat: true
         };
       }
 
-      // Se não tiver preço unitário, calculamos
-      if (unitPrice === null) {
+      // Verificar se o preço unitário precisa ser calculado
+      if (!unitPrice || unitPrice === total) {
+        // Se o preço unitário não foi fornecido ou é igual ao total,
+        // calculamos dividindo o total pela quantidade
         unitPrice = total / quantity;
         console.log('Calculated unit price:', {
           product: item.productName,
@@ -63,13 +65,26 @@ export const validateReceiptData = (data: any) => {
         });
       }
 
-      // Sempre consideramos válido se tiver nome do produto e total
+      // Validar se o preço total está correto
+      const calculatedTotal = unitPrice * quantity;
+      const isValidTotal = Math.abs(calculatedTotal - total) < 0.01; // Tolerância para arredondamento
+
+      if (!isValidTotal) {
+        console.log('Total price mismatch:', {
+          product: item.productName,
+          calculatedTotal,
+          actualTotal: total,
+          quantity,
+          unitPrice
+        });
+      }
+
       return {
         productName: item.productName,
         quantity: quantity,
         unitPrice: unitPrice,
         total: total,
-        validFormat: true
+        validFormat: isValidTotal
       };
     } catch (error) {
       console.error('Error processing item:', error, item);
@@ -96,4 +111,3 @@ export const validateReceiptData = (data: any) => {
     purchaseDate
   };
 };
-
