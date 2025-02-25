@@ -6,8 +6,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { startOfYear, endOfYear, eachMonthOfInterval, format } from "date-fns";
+import { startOfMonth, endOfMonth, eachMonthOfInterval, format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MonthFilterProps {
   selectedMonth: string;
@@ -15,11 +17,44 @@ interface MonthFilterProps {
 }
 
 export function MonthFilter({ selectedMonth, onMonthSelect }: MonthFilterProps) {
-  const currentDate = new Date();
-  const months = eachMonthOfInterval({
-    start: startOfYear(currentDate),
-    end: endOfYear(currentDate),
-  });
+  const [monthRange, setMonthRange] = useState<Date[]>([]);
+
+  useEffect(() => {
+    fetchDateRange();
+  }, []);
+
+  const fetchDateRange = async () => {
+    try {
+      // Buscar a data mais antiga e mais recente dos recibos
+      const { data: oldestReceipt } = await supabase
+        .from('receipts')
+        .select('data_compra')
+        .order('data_compra', { ascending: true })
+        .limit(1)
+        .single();
+
+      const { data: newestReceipt } = await supabase
+        .from('receipts')
+        .select('data_compra')
+        .order('data_compra', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (oldestReceipt && newestReceipt) {
+        const startDate = startOfMonth(parseISO(oldestReceipt.data_compra));
+        const endDate = endOfMonth(parseISO(newestReceipt.data_compra));
+
+        const months = eachMonthOfInterval({
+          start: startDate,
+          end: endDate,
+        });
+
+        setMonthRange(months);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar intervalo de datas:', error);
+    }
+  };
 
   return (
     <Select value={selectedMonth} onValueChange={onMonthSelect}>
@@ -28,7 +63,7 @@ export function MonthFilter({ selectedMonth, onMonthSelect }: MonthFilterProps) 
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="all">Todos os meses</SelectItem>
-        {months.map((month) => (
+        {monthRange.map((month) => (
           <SelectItem
             key={format(month, "MM-yyyy")}
             value={format(month, "MM-yyyy")}
