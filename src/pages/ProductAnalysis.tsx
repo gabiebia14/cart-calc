@@ -1,4 +1,3 @@
-
 import { BottomNav } from "@/components/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
@@ -44,6 +43,10 @@ const ProductAnalysis = () => {
     });
   };
 
+  const calculateUnitPrice = (total: number, quantity: number) => {
+    return quantity > 0 ? total / quantity : 0;
+  };
+
   const fetchTopProducts = async () => {
     try {
       const { data: receipts, error } = await supabase
@@ -53,7 +56,6 @@ const ProductAnalysis = () => {
 
       if (error) throw error;
 
-      // Filtrar recibos pelo mês selecionado
       const filteredReceipts = filterByMonth(receipts, 'data_compra');
 
       const productMap = new Map<string, { quantity: number; total: number }>();
@@ -62,10 +64,15 @@ const ProductAnalysis = () => {
         const items = receipt.items as any[];
         items.forEach(item => {
           const currentProduct = productMap.get(item.productName) || { quantity: 0, total: 0 };
-          productMap.set(item.productName, {
-            quantity: currentProduct.quantity + Number(item.quantity),
-            total: currentProduct.total + Number(item.total)
-          });
+          const quantity = Number(item.quantity);
+          const total = Number(item.total);
+
+          if (!isNaN(quantity) && !isNaN(total) && quantity > 0) {
+            productMap.set(item.productName, {
+              quantity: currentProduct.quantity + quantity,
+              total: currentProduct.total + total
+            });
+          }
         });
       });
 
@@ -84,10 +91,6 @@ const ProductAnalysis = () => {
     }
   };
 
-  useEffect(() => {
-    fetchTopProducts();
-  }, [selectedMonth]);
-
   const fetchProductHistory = async (productName: string) => {
     try {
       const { data: receipts, error } = await supabase
@@ -97,7 +100,6 @@ const ProductAnalysis = () => {
 
       if (error) throw error;
 
-      // Filtrar recibos pelo mês selecionado se necessário
       const filteredReceipts = filterByMonth(receipts, 'data_compra');
 
       const history: any[] = [];
@@ -114,38 +116,50 @@ const ProductAnalysis = () => {
             const quantity = Number(item.quantity);
             const total = Number(item.total);
             const date = new Date(receipt.data_compra).toISOString().split('T')[0];
+            const unitPrice = calculateUnitPrice(total, quantity);
 
-            history.push({
-              date,
-              price: total
-            });
-
-            purchases.push({
-              date,
-              price: total,
-              market: receipt.mercado,
+            console.log('Processing item in history:', {
+              product: productName,
               quantity,
-              total
+              total,
+              calculatedUnitPrice: unitPrice,
+              date,
+              market: receipt.mercado
             });
 
-            if (total < lowestPrice.price) {
-              lowestPrice = {
-                price: total,
+            if (quantity > 0 && total > 0) {
+              history.push({
                 date,
-                market: receipt.mercado
-              };
-            }
+                price: unitPrice
+              });
 
-            if (total > highestPrice.price) {
-              highestPrice = {
-                price: total,
+              purchases.push({
                 date,
-                market: receipt.mercado
-              };
-            }
+                price: unitPrice,
+                market: receipt.mercado,
+                quantity,
+                total
+              });
 
-            totalSpent += total;
-            totalQuantity += quantity;
+              if (unitPrice < lowestPrice.price) {
+                lowestPrice = {
+                  price: unitPrice,
+                  date,
+                  market: receipt.mercado
+                };
+              }
+
+              if (unitPrice > highestPrice.price) {
+                highestPrice = {
+                  price: unitPrice,
+                  date,
+                  market: receipt.mercado
+                };
+              }
+
+              totalSpent += total;
+              totalQuantity += quantity;
+            }
           }
         });
       });
@@ -169,6 +183,10 @@ const ProductAnalysis = () => {
       fetchProductHistory(selectedProduct);
     }
   }, [selectedProduct, selectedMonth]);
+
+  useEffect(() => {
+    fetchTopProducts();
+  }, [selectedMonth]);
 
   useEffect(() => {
     const searchProducts = async () => {
