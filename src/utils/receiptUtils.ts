@@ -29,12 +29,14 @@ export const validateReceiptData = (data: any) => {
       const total = Number(String(item.total || '').replace(/[^\d.-]/g, ''));
       let unitPrice = item.unitPrice ? Number(String(item.unitPrice).replace(/[^\d.-]/g, '')) : null;
 
-      console.log('Processing item:', {
-        productName,
-        quantity,
-        unitPrice,
-        total,
-        hasUnitPrice: unitPrice !== null
+      console.log('Raw item data:', {
+        original: item,
+        parsed: {
+          productName,
+          quantity,
+          unitPrice,
+          total
+        }
       });
 
       // Validar dados mínimos necessários
@@ -57,15 +59,21 @@ export const validateReceiptData = (data: any) => {
 
       // Caso 1: 4 colunas (nome, quantidade, preço unitário, total)
       if (unitPrice !== null) {
-        // Se o preço unitário não foi detectado ou é igual ao total,
+        // Se o preço unitário não foi detectado, é igual ao total ou parece incorreto,
         // calculamos dividindo o total pela quantidade
-        if (unitPrice <= 0 || Math.abs(unitPrice - total) < 0.01) {
+        if (unitPrice <= 0 || Math.abs(unitPrice - total) < 0.01 || Math.abs(quantity * unitPrice - total) >= 0.01) {
+          const originalUnitPrice = unitPrice;
           unitPrice = total / quantity;
-          console.log('Recalculated unit price:', {
+          
+          console.log('Recalculating unit price:', {
             product: productName,
             quantity,
+            originalUnitPrice,
             newUnitPrice: unitPrice,
-            total
+            total,
+            reason: unitPrice <= 0 ? 'zero/negative' : 
+                    Math.abs(unitPrice - total) < 0.01 ? 'equals total' : 
+                    'calculation mismatch'
           });
         }
 
@@ -78,7 +86,8 @@ export const validateReceiptData = (data: any) => {
           unitPrice,
           calculatedTotal,
           actualTotal: total,
-          isValid
+          isValid,
+          difference: Math.abs(calculatedTotal - total)
         });
 
         return {
@@ -113,7 +122,9 @@ export const validateReceiptData = (data: any) => {
         product: productName,
         quantity,
         unitPrice: calculatedUnitPrice,
-        total
+        total,
+        calculatedTotal: calculatedUnitPrice * quantity,
+        difference: Math.abs(calculatedUnitPrice * quantity - total)
       });
 
       return {
