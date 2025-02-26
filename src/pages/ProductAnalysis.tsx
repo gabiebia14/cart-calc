@@ -96,7 +96,7 @@ const ProductAnalysis = () => {
       const { data: receipts, error } = await supabase
         .from('receipts')
         .select('*')
-        .order('data_compra', { ascending: true });
+        .order('data_compra', { ascending: false });
 
       if (error) throw error;
 
@@ -164,8 +164,11 @@ const ProductAnalysis = () => {
         });
       });
 
-      setPriceHistory(history);
-      setPurchaseHistory(purchases);
+      const sortedHistory = history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const sortedPurchases = purchases.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      setPriceHistory(sortedHistory);
+      setPurchaseHistory(sortedPurchases);
       setProductStats({
         lowestPrice: lowestPrice.price !== Infinity ? lowestPrice : null,
         highestPrice: highestPrice.price !== -Infinity ? highestPrice : null,
