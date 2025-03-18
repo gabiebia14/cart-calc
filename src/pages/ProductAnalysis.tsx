@@ -1,3 +1,4 @@
+
 import { BottomNav } from "@/components/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
@@ -11,6 +12,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { TopProductsList } from "@/components/TopProductsList";
 import { MonthFilter } from "@/components/MonthFilter";
 import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
 
 const ProductAnalysis = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,6 +22,7 @@ const ProductAnalysis = () => {
   const [priceHistory, setPriceHistory] = useState<any[]>([]);
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
   const [topProducts, setTopProducts] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [productStats, setProductStats] = useState<{
     lowestPrice: { price: number; date: string; market: string } | null;
     highestPrice: { price: number; date: string; market: string } | null;
@@ -178,6 +181,7 @@ const ProductAnalysis = () => {
 
     } catch (error) {
       console.error('Error fetching product history:', error);
+      toast.error('Erro ao buscar histórico do produto');
     }
   };
 
@@ -193,19 +197,24 @@ const ProductAnalysis = () => {
 
   useEffect(() => {
     const searchProducts = async () => {
-      if (debouncedSearch.length < 3) {
-        setProducts([]);
-        return;
-      }
-
+      setIsSearching(true);
+      
       try {
+        if (debouncedSearch.length < 3) {
+          setProducts([]);
+          setIsSearching(false);
+          return;
+        }
+
+        console.log('Searching for products with term:', debouncedSearch);
+        
         const { data: receipts, error } = await supabase
           .from('receipts')
-          .select('items')
-          .order('created_at', { ascending: false });
+          .select('items');
 
         if (error) {
           console.error('Error fetching products:', error);
+          toast.error('Erro ao buscar produtos');
           return;
         }
 
@@ -214,21 +223,42 @@ const ProductAnalysis = () => {
           receipts.forEach(receipt => {
             const items = receipt.items as any[];
             items.forEach(item => {
-              if (item.productName.toLowerCase().includes(debouncedSearch.toLowerCase())) {
+              if (item.productName && item.productName.toLowerCase().includes(debouncedSearch.toLowerCase())) {
                 allProducts.add(item.productName);
               }
             });
           });
 
+          console.log('Found products:', Array.from(allProducts));
           setProducts(Array.from(allProducts));
         }
       } catch (error) {
         console.error('Error searching products:', error);
+        toast.error('Erro ao buscar produtos');
+      } finally {
+        setIsSearching(false);
       }
     };
 
     searchProducts();
   }, [debouncedSearch]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    console.log('Search input changed:', value);
+    setSearchTerm(value);
+    if (!value) {
+      setSelectedProduct(null);
+      setProducts([]);
+    }
+  };
+
+  const handleProductSelect = (product: string) => {
+    console.log('Product selected:', product);
+    setSearchTerm(product);
+    setSelectedProduct(product);
+    setProducts([]);
+  };
 
   return (
     <div className="min-h-screen bg-background font-inter">
@@ -252,7 +282,7 @@ const ProductAnalysis = () => {
               placeholder="Buscar produtos..."
               className="pl-10"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
             />
             <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
           </div>
@@ -269,16 +299,24 @@ const ProductAnalysis = () => {
                   <li 
                     key={index}
                     className="px-4 py-2 hover:bg-secondary cursor-pointer"
-                    onClick={() => {
-                      setSearchTerm(product);
-                      setSelectedProduct(product);
-                      fetchProductHistory(product);
-                    }}
+                    onClick={() => handleProductSelect(product)}
                   >
                     {product}
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+          
+          {isSearching && searchTerm.length >= 3 && (
+            <div className="mt-2 absolute z-10 w-full max-w-md bg-background border rounded-md shadow-lg">
+              <div className="px-4 py-2 text-sm text-muted-foreground">Buscando produtos...</div>
+            </div>
+          )}
+          
+          {products.length === 0 && searchTerm.length >= 3 && !isSearching && !selectedProduct && (
+            <div className="mt-2 absolute z-10 w-full max-w-md bg-background border rounded-md shadow-lg">
+              <div className="px-4 py-2 text-sm text-muted-foreground">Nenhum produto encontrado</div>
             </div>
           )}
         </div>
