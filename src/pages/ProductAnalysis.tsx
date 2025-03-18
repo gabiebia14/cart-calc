@@ -1,7 +1,6 @@
-
 import { BottomNav } from "@/components/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search } from "lucide-react";
+import { Search, XCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
@@ -40,7 +39,6 @@ const ProductAnalysis = () => {
   
   const debouncedSearch = useDebounce(searchTerm, 300);
 
-  // Helper function to filter data by month
   const filterByMonth = (data: any[], dateField: string) => {
     if (selectedMonth === 'all') return data;
     
@@ -131,12 +129,12 @@ const ProductAnalysis = () => {
   useEffect(() => {
     const searchNormalizedProducts = async () => {
       setIsSearching(true);
-      setShowResults(false);
       
       try {
         if (debouncedSearch.length < 2) {
           setNormalizedProducts([]);
           setIsSearching(false);
+          setShowResults(false);
           return;
         }
 
@@ -146,10 +144,7 @@ const ProductAnalysis = () => {
         
         console.log('Found normalized products:', products);
         setNormalizedProducts(products);
-        
-        if (debouncedSearch.length >= 2) {
-          setShowResults(true);
-        }
+        setShowResults(products.length > 0 || debouncedSearch.length >= 2);
       } catch (error) {
         console.error('Error searching normalized products:', error);
         toast.error('Erro ao buscar produtos');
@@ -166,13 +161,11 @@ const ProductAnalysis = () => {
     console.log('Search input changed:', value);
     setSearchTerm(value);
     
-    // Reset selected product when search term changes
     if (selectedProductName && value !== selectedProductName) {
       setSelectedProductId(null);
       setSelectedProductName(null);
     }
     
-    // Show search results when typing
     if (value.length >= 2) {
       setShowResults(true);
     } else {
@@ -185,7 +178,7 @@ const ProductAnalysis = () => {
     console.log('Product selected:', productId, productName);
     setSearchTerm(productName);
     loadProductHistory(productId, productName);
-    setShowResults(false); // Hide results after selection
+    setShowResults(false);
   };
 
   const handleSearchClear = () => {
@@ -199,7 +192,6 @@ const ProductAnalysis = () => {
   return (
     <div className="min-h-screen bg-background font-inter">
       <div className="max-w-7xl mx-auto p-4">
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
@@ -211,7 +203,6 @@ const ProductAnalysis = () => {
           </div>
         </div>
 
-        {/* Search and Filter */}
         <div className="mb-6 flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
             <Input 
@@ -225,49 +216,50 @@ const ProductAnalysis = () => {
               <button 
                 onClick={handleSearchClear}
                 className="absolute right-3 top-2.5 h-5 w-5 text-muted-foreground hover:text-foreground"
+                aria-label="Limpar busca"
               >
-                ✕
+                <XCircle className="h-5 w-5" />
               </button>
+            )}
+            
+            {showResults && !selectedProductId && (
+              <div className="mt-2 absolute z-10 w-full bg-background border rounded-md shadow-lg">
+                {isSearching && (
+                  <div className="px-4 py-2 text-sm text-muted-foreground">
+                    Buscando produtos...
+                  </div>
+                )}
+                
+                {!isSearching && normalizedProducts.length === 0 && (
+                  <div className="px-4 py-2 text-sm text-muted-foreground">
+                    Nenhum produto encontrado
+                  </div>
+                )}
+                
+                {!isSearching && normalizedProducts.length > 0 && (
+                  <ul className="py-2">
+                    {normalizedProducts.map((product, index) => (
+                      <li 
+                        key={index}
+                        className="px-4 py-2 hover:bg-secondary cursor-pointer"
+                        onClick={() => handleProductSelect(product.id, product.normalized_name)}
+                      >
+                        {product.normalized_name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             )}
           </div>
           <MonthFilter
             selectedMonth={selectedMonth}
             onMonthSelect={setSelectedMonth}
           />
-          
-          {/* Search Results */}
-          {normalizedProducts.length > 0 && showResults && !selectedProductId && (
-            <div className="mt-2 absolute z-10 w-full max-w-md bg-background border rounded-md shadow-lg">
-              <ul className="py-2">
-                {normalizedProducts.map((product, index) => (
-                  <li 
-                    key={index}
-                    className="px-4 py-2 hover:bg-secondary cursor-pointer"
-                    onClick={() => handleProductSelect(product.id, product.normalized_name)}
-                  >
-                    {product.normalized_name}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
-          {isSearching && searchTerm.length >= 2 && (
-            <div className="mt-2 absolute z-10 w-full max-w-md bg-background border rounded-md shadow-lg">
-              <div className="px-4 py-2 text-sm text-muted-foreground">Buscando produtos...</div>
-            </div>
-          )}
-          
-          {normalizedProducts.length === 0 && searchTerm.length >= 2 && !isSearching && !selectedProductId && showResults && (
-            <div className="mt-2 absolute z-10 w-full max-w-md bg-background border rounded-md shadow-lg">
-              <div className="px-4 py-2 text-sm text-muted-foreground">Nenhum produto encontrado</div>
-            </div>
-          )}
         </div>
 
         {selectedProductId ? (
           <>
-            {/* Product Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <Card className="shadow-sm">
                 <CardContent className="p-4">
@@ -329,7 +321,6 @@ const ProductAnalysis = () => {
               </Card>
             </div>
 
-            {/* Price Variation Chart */}
             <Card className="mb-6 shadow-sm">
               <CardContent className="p-4">
                 <h3 className="font-semibold mb-4">Variação de Preço</h3>
@@ -358,7 +349,6 @@ const ProductAnalysis = () => {
               </CardContent>
             </Card>
 
-            {/* Purchase History Table */}
             <Card className="shadow-sm mb-20">
               <CardContent className="p-4">
                 <h3 className="font-semibold mb-4">Histórico de Compras</h3>

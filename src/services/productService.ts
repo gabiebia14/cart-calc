@@ -76,18 +76,36 @@ export const getNormalizedProducts = async (searchTerm: string): Promise<{ id: s
       return [];
     }
 
-    // First search in the normalized products table
-    const { data: normalizedProducts } = await supabase
+    console.log('Searching with term:', searchTerm);
+
+    // First search in the normalized products table with improved search
+    const { data: normalizedProducts, error: normalizedError } = await supabase
       .from('normalized_products')
       .select('id, normalized_name')
-      .ilike('normalized_name', `%${searchTerm}%`)
-      .order('normalized_name');
+      .or(`normalized_name.ilike.%${searchTerm}%, normalized_name.ilike.${searchTerm}%`)
+      .order('normalized_name')
+      .limit(10);
+
+    if (normalizedError) {
+      console.error('Error searching normalized products:', normalizedError);
+      throw normalizedError;
+    }
+
+    console.log('Normalized products results:', normalizedProducts);
 
     // Then search in the mappings for any original names that match
-    const { data: mappings } = await supabase
+    const { data: mappings, error: mappingsError } = await supabase
       .from('product_name_mappings')
       .select('normalized_product_id, normalized_products(id, normalized_name)')
-      .ilike('original_name', `%${searchTerm}%`);
+      .or(`original_name.ilike.%${searchTerm}%, original_name.ilike.${searchTerm}%`)
+      .limit(10);
+
+    if (mappingsError) {
+      console.error('Error searching product mappings:', mappingsError);
+      throw mappingsError;
+    }
+
+    console.log('Product mappings results:', mappings);
 
     // Combine the results, filtering out duplicates
     const normalizedProductsMap = new Map();
@@ -109,7 +127,9 @@ export const getNormalizedProducts = async (searchTerm: string): Promise<{ id: s
       });
     }
 
-    return Array.from(normalizedProductsMap.values());
+    const results = Array.from(normalizedProductsMap.values());
+    console.log('Combined search results:', results);
+    return results;
   } catch (error) {
     console.error('Error in getNormalizedProducts:', error);
     return [];
