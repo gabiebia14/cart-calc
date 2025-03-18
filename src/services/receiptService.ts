@@ -1,8 +1,8 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Receipt, ReceiptItem } from "@/types/receipt";
 import { validateReceiptData } from "@/utils/receiptUtils";
 import { Json } from "@/integrations/supabase/types";
+import { normalizeProductName } from "./productService";
 
 export const fetchReceiptsList = async () => {
   const { data, error } = await supabase
@@ -100,7 +100,27 @@ export const saveReceipt = async (items: any[], storeName: string, userId: strin
 
   if (dbError) throw dbError;
 
+  // After saving the receipt, normalize all product names in background
   if (receipt) {
+    // Process product normalization in background without waiting for it
+    setTimeout(async () => {
+      try {
+        if (items && items.length > 0) {
+          console.log('Starting product name normalization for new receipt items');
+          
+          for (const item of items) {
+            if (item.productName) {
+              await normalizeProductName(item.productName);
+            }
+          }
+          
+          console.log('Completed product name normalization for new receipt items');
+        }
+      } catch (error) {
+        console.error('Error normalizing product names:', error);
+      }
+    }, 0);
+
     return {
       ...receipt,
       items: (receipt.items as any[]).map(item => ({
@@ -115,4 +135,3 @@ export const saveReceipt = async (items: any[], storeName: string, userId: strin
 
   throw new Error('Erro ao salvar recibo');
 };
-

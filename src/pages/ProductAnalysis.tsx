@@ -1,4 +1,3 @@
-
 import { BottomNav } from "@/components/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
@@ -7,18 +6,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis } from 'recharts';
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useDebounce } from "@/hooks/use-debounce";
 import { TopProductsList } from "@/components/TopProductsList";
 import { MonthFilter } from "@/components/MonthFilter";
-import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
+import { getNormalizedProducts, getProductHistory } from "@/services/productService";
 
 const ProductAnalysis = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('all');
-  const [products, setProducts] = useState<string[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [normalizedProducts, setNormalizedProducts] = useState<Array<{id: string, normalized_name: string}>>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedProductName, setSelectedProductName] = useState<string | null>(null);
   const [priceHistory, setPriceHistory] = useState<any[]>([]);
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
   const [topProducts, setTopProducts] = useState<any[]>([]);
@@ -37,19 +36,6 @@ const ProductAnalysis = () => {
   });
   
   const debouncedSearch = useDebounce(searchTerm, 300);
-
-  const filterByMonth = (data: any[], dateField: string) => {
-    if (selectedMonth === 'all') return data;
-    return data.filter(item => {
-      const itemDate = parseISO(item[dateField]);
-      const itemMonth = format(itemDate, "MM-yyyy");
-      return itemMonth === selectedMonth;
-    });
-  };
-
-  const calculateUnitPrice = (total: number, quantity: number) => {
-    return quantity > 0 ? total / quantity : 0;
-  };
 
   const fetchTopProducts = async () => {
     try {
@@ -95,158 +81,67 @@ const ProductAnalysis = () => {
     }
   };
 
-  const fetchProductHistory = async (productName: string) => {
+  const loadProductHistory = async (productId: string, productName: string) => {
     try {
-      const { data: receipts, error } = await supabase
-        .from('receipts')
-        .select('*')
-        .order('data_compra', { ascending: false });
-
-      if (error) throw error;
-
-      const filteredReceipts = filterByMonth(receipts, 'data_compra');
-
-      const history: any[] = [];
-      const purchases: any[] = [];
-      let lowestPrice = { price: Infinity, date: '', market: '' };
-      let highestPrice = { price: -Infinity, date: '', market: '' };
-      let totalSpent = 0;
-      let totalQuantity = 0;
-
-      filteredReceipts?.forEach(receipt => {
-        const items = receipt.items as any[];
-        items.forEach(item => {
-          if (item.productName.toLowerCase() === productName.toLowerCase()) {
-            const quantity = Number(item.quantity);
-            const total = Number(item.total);
-            const date = new Date(receipt.data_compra).toISOString().split('T')[0];
-            const unitPrice = calculateUnitPrice(total, quantity);
-
-            console.log('Processing item in history:', {
-              product: productName,
-              quantity,
-              total,
-              calculatedUnitPrice: unitPrice,
-              date,
-              market: receipt.mercado
-            });
-
-            if (quantity > 0 && total > 0) {
-              history.push({
-                date,
-                price: unitPrice
-              });
-
-              purchases.push({
-                date,
-                price: unitPrice,
-                market: receipt.mercado,
-                quantity,
-                total
-              });
-
-              if (unitPrice < lowestPrice.price) {
-                lowestPrice = {
-                  price: unitPrice,
-                  date,
-                  market: receipt.mercado
-                };
-              }
-
-              if (unitPrice > highestPrice.price) {
-                highestPrice = {
-                  price: unitPrice,
-                  date,
-                  market: receipt.mercado
-                };
-              }
-
-              totalSpent += total;
-              totalQuantity += quantity;
-            }
-          }
-        });
-      });
-
-      const sortedHistory = history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      const sortedPurchases = purchases.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      setPriceHistory(sortedHistory);
-      setPurchaseHistory(sortedPurchases);
-      setProductStats({
-        lowestPrice: lowestPrice.price !== Infinity ? lowestPrice : null,
-        highestPrice: highestPrice.price !== -Infinity ? highestPrice : null,
-        totalSpent,
-        totalQuantity
-      });
-
+      setIsSearching(true);
+      
+      const result = await getProductHistory(productId);
+      
+      setPriceHistory(result.priceHistory);
+      setPurchaseHistory(result.purchaseHistory);
+      setProductStats(result.productStats);
+      setSelectedProductId(productId);
+      setSelectedProductName(productName);
+      
+      setIsSearching(false);
     } catch (error) {
-      console.error('Error fetching product history:', error);
-      toast.error('Erro ao buscar histórico do produto');
+      console.error('Error loading product history:', error);
+      toast.error('Erro ao carregar histórico do produto');
+      setIsSearching(false);
     }
   };
 
   useEffect(() => {
-    if (selectedProduct) {
-      fetchProductHistory(selectedProduct);
+    if (selectedProductId) {
+      loadProductHistory(selectedProductId, selectedProductName || '');
     }
-  }, [selectedProduct, selectedMonth]);
+  }, [selectedMonth]);
 
   useEffect(() => {
     fetchTopProducts();
   }, [selectedMonth]);
 
   useEffect(() => {
-    const searchProducts = async () => {
+    const searchNormalizedProducts = async () => {
       setIsSearching(true);
       setShowResults(false);
       
       try {
-        if (debouncedSearch.length < 3) {
-          setProducts([]);
+        if (debouncedSearch.length < 2) {
+          setNormalizedProducts([]);
           setIsSearching(false);
           return;
         }
 
-        console.log('Searching for products with term:', debouncedSearch);
+        console.log('Searching for normalized products with term:', debouncedSearch);
         
-        const { data: receipts, error } = await supabase
-          .from('receipts')
-          .select('items');
-
-        if (error) {
-          console.error('Error fetching products:', error);
-          toast.error('Erro ao buscar produtos');
-          return;
-        }
-
-        if (receipts) {
-          const allProducts = new Set<string>();
-          receipts.forEach(receipt => {
-            const items = receipt.items as any[];
-            items.forEach(item => {
-              if (item.productName && item.productName.toLowerCase().includes(debouncedSearch.toLowerCase())) {
-                allProducts.add(item.productName);
-              }
-            });
-          });
-
-          console.log('Found products:', Array.from(allProducts));
-          setProducts(Array.from(allProducts));
-          
-          if (debouncedSearch.length >= 3) {
-            setShowResults(true);
-          }
+        const products = await getNormalizedProducts(debouncedSearch);
+        
+        console.log('Found normalized products:', products);
+        setNormalizedProducts(products);
+        
+        if (debouncedSearch.length >= 2) {
+          setShowResults(true);
         }
       } catch (error) {
-        console.error('Error searching products:', error);
+        console.error('Error searching normalized products:', error);
         toast.error('Erro ao buscar produtos');
       } finally {
         setIsSearching(false);
       }
     };
 
-    searchProducts();
+    searchNormalizedProducts();
   }, [debouncedSearch]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -255,30 +150,32 @@ const ProductAnalysis = () => {
     setSearchTerm(value);
     
     // Reset selected product when search term changes
-    if (selectedProduct && value !== selectedProduct) {
-      setSelectedProduct(null);
+    if (selectedProductName && value !== selectedProductName) {
+      setSelectedProductId(null);
+      setSelectedProductName(null);
     }
     
     // Show search results when typing
-    if (value.length >= 3) {
+    if (value.length >= 2) {
       setShowResults(true);
     } else {
       setShowResults(false);
-      setProducts([]);
+      setNormalizedProducts([]);
     }
   };
 
-  const handleProductSelect = (product: string) => {
-    console.log('Product selected:', product);
-    setSearchTerm(product);
-    setSelectedProduct(product);
+  const handleProductSelect = (productId: string, productName: string) => {
+    console.log('Product selected:', productId, productName);
+    setSearchTerm(productName);
+    loadProductHistory(productId, productName);
     setShowResults(false); // Hide results after selection
   };
 
   const handleSearchClear = () => {
     setSearchTerm('');
-    setSelectedProduct(null);
-    setProducts([]);
+    setSelectedProductId(null);
+    setSelectedProductName(null);
+    setNormalizedProducts([]);
     setShowResults(false);
   };
 
@@ -322,36 +219,36 @@ const ProductAnalysis = () => {
           />
           
           {/* Search Results */}
-          {products.length > 0 && showResults && !selectedProduct && (
+          {normalizedProducts.length > 0 && showResults && !selectedProductId && (
             <div className="mt-2 absolute z-10 w-full max-w-md bg-background border rounded-md shadow-lg">
               <ul className="py-2">
-                {products.map((product, index) => (
+                {normalizedProducts.map((product, index) => (
                   <li 
                     key={index}
                     className="px-4 py-2 hover:bg-secondary cursor-pointer"
-                    onClick={() => handleProductSelect(product)}
+                    onClick={() => handleProductSelect(product.id, product.normalized_name)}
                   >
-                    {product}
+                    {product.normalized_name}
                   </li>
                 ))}
               </ul>
             </div>
           )}
           
-          {isSearching && searchTerm.length >= 3 && (
+          {isSearching && searchTerm.length >= 2 && (
             <div className="mt-2 absolute z-10 w-full max-w-md bg-background border rounded-md shadow-lg">
               <div className="px-4 py-2 text-sm text-muted-foreground">Buscando produtos...</div>
             </div>
           )}
           
-          {products.length === 0 && searchTerm.length >= 3 && !isSearching && !selectedProduct && showResults && (
+          {normalizedProducts.length === 0 && searchTerm.length >= 2 && !isSearching && !selectedProductId && showResults && (
             <div className="mt-2 absolute z-10 w-full max-w-md bg-background border rounded-md shadow-lg">
               <div className="px-4 py-2 text-sm text-muted-foreground">Nenhum produto encontrado</div>
             </div>
           )}
         </div>
 
-        {selectedProduct ? (
+        {selectedProductId ? (
           <>
             {/* Product Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -453,6 +350,7 @@ const ProductAnalysis = () => {
                     <TableRow>
                       <TableHead>Data</TableHead>
                       <TableHead>Mercado</TableHead>
+                      <TableHead>Nome Original</TableHead>
                       <TableHead>Quantidade</TableHead>
                       <TableHead>Preço Unit.</TableHead>
                       <TableHead>Total</TableHead>
@@ -465,6 +363,7 @@ const ProductAnalysis = () => {
                           {new Date(purchase.date).toLocaleDateString('pt-BR')}
                         </TableCell>
                         <TableCell>{purchase.market}</TableCell>
+                        <TableCell>{purchase.productName}</TableCell>
                         <TableCell>{purchase.quantity}</TableCell>
                         <TableCell>
                           {new Intl.NumberFormat('pt-BR', { 
