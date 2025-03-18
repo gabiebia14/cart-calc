@@ -13,14 +13,12 @@ import { TopProductsList } from "@/components/TopProductsList";
 import { MonthFilter } from "@/components/MonthFilter";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
-import { normalizeProductName, isSameProduct, groupSimilarProducts } from "@/utils/productSimilarity";
 
 const ProductAnalysis = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [products, setProducts] = useState<string[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
-  const [similarProducts, setSimilarProducts] = useState<string[]>([]);
   const [priceHistory, setPriceHistory] = useState<any[]>([]);
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
   const [topProducts, setTopProducts] = useState<any[]>([]);
@@ -115,27 +113,17 @@ const ProductAnalysis = () => {
       let totalSpent = 0;
       let totalQuantity = 0;
 
-      // Primeiro, buscamos todos os produtos similares ao selecionado
-      const allSimilarProducts = [productName, ...similarProducts];
-      console.log('Buscando histórico para produtos similares:', allSimilarProducts);
-
       filteredReceipts?.forEach(receipt => {
         const items = receipt.items as any[];
         items.forEach(item => {
-          // Verifica se este item corresponde a qualquer um dos produtos similares
-          const isSimilar = allSimilarProducts.some(
-            similarProduct => isSameProduct(item.productName, similarProduct)
-          );
-
-          if (isSimilar) {
+          if (item.productName.toLowerCase() === productName.toLowerCase()) {
             const quantity = Number(item.quantity);
             const total = Number(item.total);
             const date = new Date(receipt.data_compra).toISOString().split('T')[0];
             const unitPrice = calculateUnitPrice(total, quantity);
 
-            console.log('Produto similar encontrado:', {
-              original: productName,
-              found: item.productName,
+            console.log('Processing item in history:', {
+              product: productName,
               quantity,
               total,
               calculatedUnitPrice: unitPrice,
@@ -154,8 +142,7 @@ const ProductAnalysis = () => {
                 price: unitPrice,
                 market: receipt.mercado,
                 quantity,
-                total,
-                productName: item.productName
+                total
               });
 
               if (unitPrice < lowestPrice.price) {
@@ -203,7 +190,7 @@ const ProductAnalysis = () => {
     if (selectedProduct) {
       fetchProductHistory(selectedProduct);
     }
-  }, [selectedProduct, selectedMonth, similarProducts]);
+  }, [selectedProduct, selectedMonth]);
 
   useEffect(() => {
     fetchTopProducts();
@@ -234,30 +221,18 @@ const ProductAnalysis = () => {
         }
 
         if (receipts) {
-          const allProductNames = new Set<string>();
-          
+          const allProducts = new Set<string>();
           receipts.forEach(receipt => {
             const items = receipt.items as any[];
             items.forEach(item => {
-              if (item.productName) {
-                allProductNames.add(item.productName);
+              if (item.productName && item.productName.toLowerCase().includes(debouncedSearch.toLowerCase())) {
+                allProducts.add(item.productName);
               }
             });
           });
 
-          // Filtra produtos por similaridade com o termo de busca
-          const productArray = Array.from(allProductNames);
-          const normalizedSearch = normalizeProductName(debouncedSearch);
-          
-          const filteredProducts = productArray.filter(productName => {
-            const normalizedProduct = normalizeProductName(productName);
-            // Verifica se o nome normalizado contém o termo de busca
-            return normalizedProduct.includes(normalizedSearch) || 
-                   calculateSimilarity(normalizedProduct, normalizedSearch) > 0.5;
-          });
-
-          console.log('Found products:', filteredProducts);
-          setProducts(filteredProducts);
+          console.log('Found products:', Array.from(allProducts));
+          setProducts(Array.from(allProducts));
           
           if (debouncedSearch.length >= 3) {
             setShowResults(true);
@@ -282,7 +257,6 @@ const ProductAnalysis = () => {
     // Reset selected product when search term changes
     if (selectedProduct && value !== selectedProduct) {
       setSelectedProduct(null);
-      setSimilarProducts([]);
     }
     
     // Show search results when typing
@@ -298,50 +272,12 @@ const ProductAnalysis = () => {
     console.log('Product selected:', product);
     setSearchTerm(product);
     setSelectedProduct(product);
-    setShowResults(false);
-    
-    // Encontrar produtos similares
-    findSimilarProducts(product);
-  };
-
-  const findSimilarProducts = async (productName: string) => {
-    try {
-      const { data: receipts, error } = await supabase
-        .from('receipts')
-        .select('items');
-
-      if (error) throw error;
-
-      if (receipts) {
-        const allProductNames = new Set<string>();
-        
-        receipts.forEach(receipt => {
-          const items = receipt.items as any[];
-          items.forEach(item => {
-            if (item.productName) {
-              allProductNames.add(item.productName);
-            }
-          });
-        });
-        
-        // Encontra produtos similares ao selecionado
-        const productArray = Array.from(allProductNames);
-        const similar = productArray.filter(name => 
-          name !== productName && isSameProduct(name, productName)
-        );
-
-        console.log('Produtos similares encontrados:', similar);
-        setSimilarProducts(similar);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar produtos similares:', error);
-    }
+    setShowResults(false); // Hide results after selection
   };
 
   const handleSearchClear = () => {
     setSearchTerm('');
     setSelectedProduct(null);
-    setSimilarProducts([]);
     setProducts([]);
     setShowResults(false);
   };
@@ -417,26 +353,6 @@ const ProductAnalysis = () => {
 
         {selectedProduct ? (
           <>
-            {/* Product Information */}
-            <div className="mb-4">
-              <h2 className="text-xl font-semibold">{selectedProduct}</h2>
-              {similarProducts.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm text-muted-foreground">Produtos similares incluídos na análise:</p>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {similarProducts.map((similar, index) => (
-                      <span 
-                        key={index} 
-                        className="inline-flex items-center px-2 py-1 bg-secondary/50 text-xs rounded-md"
-                      >
-                        {similar}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Product Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
               <Card className="shadow-sm">
@@ -537,7 +453,6 @@ const ProductAnalysis = () => {
                     <TableRow>
                       <TableHead>Data</TableHead>
                       <TableHead>Mercado</TableHead>
-                      <TableHead>Nome do Produto</TableHead>
                       <TableHead>Quantidade</TableHead>
                       <TableHead>Preço Unit.</TableHead>
                       <TableHead>Total</TableHead>
@@ -550,13 +465,6 @@ const ProductAnalysis = () => {
                           {new Date(purchase.date).toLocaleDateString('pt-BR')}
                         </TableCell>
                         <TableCell>{purchase.market}</TableCell>
-                        <TableCell>
-                          {purchase.productName === selectedProduct ? (
-                            <span className="font-medium">{purchase.productName}</span>
-                          ) : (
-                            <span className="text-muted-foreground">{purchase.productName}</span>
-                          )}
-                        </TableCell>
                         <TableCell>{purchase.quantity}</TableCell>
                         <TableCell>
                           {new Intl.NumberFormat('pt-BR', { 
