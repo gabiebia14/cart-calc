@@ -1,3 +1,4 @@
+
 import { BottomNav } from "@/components/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search } from "lucide-react";
@@ -11,6 +12,8 @@ import { TopProductsList } from "@/components/TopProductsList";
 import { MonthFilter } from "@/components/MonthFilter";
 import { toast } from "sonner";
 import { getNormalizedProducts, getProductHistory } from "@/services/productService";
+import { supabase } from "@/integrations/supabase/client";
+import { parseISO, format, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
 
 const ProductAnalysis = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,6 +39,20 @@ const ProductAnalysis = () => {
   });
   
   const debouncedSearch = useDebounce(searchTerm, 300);
+
+  // Helper function to filter data by month
+  const filterByMonth = (data: any[], dateField: string) => {
+    if (selectedMonth === 'all') return data;
+    
+    const [month, year] = selectedMonth.split('-');
+    const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+    const endDate = endOfMonth(startDate);
+    
+    return data.filter(item => {
+      const itemDate = parseISO(item[dateField]);
+      return isWithinInterval(itemDate, { start: startDate, end: endDate });
+    });
+  };
 
   const fetchTopProducts = async () => {
     try {
