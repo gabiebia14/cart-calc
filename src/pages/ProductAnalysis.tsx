@@ -23,6 +23,7 @@ const ProductAnalysis = () => {
   const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const [productStats, setProductStats] = useState<{
     lowestPrice: { price: number; date: string; market: string } | null;
     highestPrice: { price: number; date: string; market: string } | null;
@@ -198,6 +199,7 @@ const ProductAnalysis = () => {
   useEffect(() => {
     const searchProducts = async () => {
       setIsSearching(true);
+      setShowResults(false);
       
       try {
         if (debouncedSearch.length < 3) {
@@ -231,6 +233,10 @@ const ProductAnalysis = () => {
 
           console.log('Found products:', Array.from(allProducts));
           setProducts(Array.from(allProducts));
+          
+          if (debouncedSearch.length >= 3) {
+            setShowResults(true);
+          }
         }
       } catch (error) {
         console.error('Error searching products:', error);
@@ -247,8 +253,17 @@ const ProductAnalysis = () => {
     const value = e.target.value;
     console.log('Search input changed:', value);
     setSearchTerm(value);
-    if (!value) {
+    
+    // Reset selected product when search term changes
+    if (selectedProduct && value !== selectedProduct) {
       setSelectedProduct(null);
+    }
+    
+    // Show search results when typing
+    if (value.length >= 3) {
+      setShowResults(true);
+    } else {
+      setShowResults(false);
       setProducts([]);
     }
   };
@@ -257,7 +272,14 @@ const ProductAnalysis = () => {
     console.log('Product selected:', product);
     setSearchTerm(product);
     setSelectedProduct(product);
+    setShowResults(false); // Hide results after selection
+  };
+
+  const handleSearchClear = () => {
+    setSearchTerm('');
+    setSelectedProduct(null);
     setProducts([]);
+    setShowResults(false);
   };
 
   return (
@@ -280,11 +302,19 @@ const ProductAnalysis = () => {
           <div className="relative flex-1">
             <Input 
               placeholder="Buscar produtos..."
-              className="pl-10"
+              className="pl-10 pr-10"
               value={searchTerm}
               onChange={handleSearchChange}
             />
             <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+            {searchTerm && (
+              <button 
+                onClick={handleSearchClear}
+                className="absolute right-3 top-2.5 h-5 w-5 text-muted-foreground hover:text-foreground"
+              >
+                ✕
+              </button>
+            )}
           </div>
           <MonthFilter
             selectedMonth={selectedMonth}
@@ -292,7 +322,7 @@ const ProductAnalysis = () => {
           />
           
           {/* Search Results */}
-          {products.length > 0 && searchTerm.length >= 3 && !selectedProduct && (
+          {products.length > 0 && showResults && !selectedProduct && (
             <div className="mt-2 absolute z-10 w-full max-w-md bg-background border rounded-md shadow-lg">
               <ul className="py-2">
                 {products.map((product, index) => (
@@ -314,7 +344,7 @@ const ProductAnalysis = () => {
             </div>
           )}
           
-          {products.length === 0 && searchTerm.length >= 3 && !isSearching && !selectedProduct && (
+          {products.length === 0 && searchTerm.length >= 3 && !isSearching && !selectedProduct && showResults && (
             <div className="mt-2 absolute z-10 w-full max-w-md bg-background border rounded-md shadow-lg">
               <div className="px-4 py-2 text-sm text-muted-foreground">Nenhum produto encontrado</div>
             </div>
