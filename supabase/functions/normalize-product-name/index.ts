@@ -52,17 +52,17 @@ serve(async (req) => {
       }
     })
 
-    const prompt = `Normalize the following product name by standardizing it to a searchable form, but keep important brand names and product identifiers. 
-    Remove package sizes and minor adjectives, but keep meaningful identifiers and brand names.
+    const prompt = `Normalize the following product name by standardizing it to a searchable form, but ALWAYS preserve full brand names and product identifiers. 
+    Remove package sizes and minor adjectives, but keep ALL brand names completely intact.
     Return ONLY the normalized name, nothing else. Keep it clean but recognizable.
     
     Examples:
     "Leite integral Parmalat 1L" → "leite parmalat"
     "Arroz branco tipo 1 Tio João 5kg" → "arroz tio joão"
-    "Coca Cola 2L" → "refrigerante coca cola"
+    "Coca Cola 2L" → "coca cola"
     "Macarrão espaguete Barilla 500g" → "macarrão espaguete barilla"
     "Papel higiênico Mili 30m" → "papel higiênico mili"
-    "Café em pó Pilão torrado e moído 500g" → "café em pó pilão"
+    "Café em pó Pilão torrado e moído 500g" → "café pilão"
     
     Now normalize this product name: `
 
