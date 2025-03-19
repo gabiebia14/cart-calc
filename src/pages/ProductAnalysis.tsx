@@ -1,3 +1,4 @@
+
 import { BottomNav } from "@/components/BottomNav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, XCircle } from "lucide-react";
@@ -144,7 +145,7 @@ const ProductAnalysis = () => {
         
         console.log('Found normalized products:', products);
         setNormalizedProducts(products);
-        setShowResults(products.length > 0 || debouncedSearch.length >= 2);
+        setShowResults(true); // Always show results if search is performed
       } catch (error) {
         console.error('Error searching normalized products:', error);
         toast.error('Erro ao buscar produtos');
@@ -232,7 +233,7 @@ const ProductAnalysis = () => {
                 
                 {!isSearching && normalizedProducts.length === 0 && (
                   <div className="px-4 py-2 text-sm text-muted-foreground">
-                    Nenhum produto encontrado
+                    Nenhum produto encontrado com "{searchTerm}"
                   </div>
                 )}
                 

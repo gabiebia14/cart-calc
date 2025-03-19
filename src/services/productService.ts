@@ -77,12 +77,15 @@ export const getNormalizedProducts = async (searchTerm: string): Promise<{ id: s
     }
 
     console.log('Searching with term:', searchTerm);
+    
+    // Use more flexible search patterns with % wildcards and case insensitivity
+    const searchPattern = `%${searchTerm}%`;
 
-    // First search in the normalized products table with improved search
+    // First search in the normalized products table
     const { data: normalizedProducts, error: normalizedError } = await supabase
       .from('normalized_products')
       .select('id, normalized_name')
-      .or(`normalized_name.ilike.%${searchTerm}%, normalized_name.ilike.${searchTerm}%`)
+      .ilike('normalized_name', searchPattern)
       .order('normalized_name')
       .limit(10);
 
@@ -93,11 +96,11 @@ export const getNormalizedProducts = async (searchTerm: string): Promise<{ id: s
 
     console.log('Normalized products results:', normalizedProducts);
 
-    // Then search in the mappings for any original names that match
+    // Then search in the mappings table for any original names that match
     const { data: mappings, error: mappingsError } = await supabase
       .from('product_name_mappings')
       .select('normalized_product_id, normalized_products(id, normalized_name)')
-      .or(`original_name.ilike.%${searchTerm}%, original_name.ilike.${searchTerm}%`)
+      .ilike('original_name', searchPattern)
       .limit(10);
 
     if (mappingsError) {
